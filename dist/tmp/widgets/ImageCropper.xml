@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<widget id="olari.imagecropper.ImageCropper" pluginWidget="true" needsEntityContext="true" supportedPlatform="Web"
+    offlineCapable="true"
+    xmlns="http://www.mendix.com/widget/1.0/"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../node_modules/mendix/custom_widget.xsd">
+    <name>Image Cropper</name>
+    <description>Legacy-style image crop selection widget for Mendix pluggable widgets.</description>
+    <studioProCategory>Input elements</studioProCategory>
+    <studioCategory>Input</studioCategory>
+    <helpUrl>https://marketplace.mendix.com/link/component/254</helpUrl>
+    <properties>
+        <propertyGroup caption="Data">
+            <property key="image" type="image" required="true">
+                <caption>Image</caption>
+                <description>Image value to display and crop. Usually the current context image object.</description>
+            </property>
+            <property key="aspectRatio" type="attribute" required="false">
+                <caption>Aspect Ratio</caption>
+                <description>Aspect ratio to enforce on the crop selection (for example 1:1 or 16:9).</description>
+                <attributeTypes>
+                    <attributeType name="String" />
+                    <attributeType name="Enum" />
+                </attributeTypes>
+            </property>
+        </propertyGroup>
+
+        <propertyGroup caption="Crop selection">
+            <property key="startwidth" type="integer" defaultValue="100">
+                <caption>Start width</caption>
+                <description>Initial crop selection width in pixels.</description>
+            </property>
+            <property key="startheight" type="integer" defaultValue="100">
+                <caption>Start height</caption>
+                <description>Initial crop selection height in pixels.</description>
+            </property>
+        </propertyGroup>
+
+        <propertyGroup caption="Appearance">
+            <property key="cropwidth" type="integer" defaultValue="300">
+                <caption>Max width</caption>
+                <description>Maximum rendered image width in pixels. Use 0 for no maximum.</description>
+            </property>
+            <property key="cropheight" type="integer" defaultValue="300">
+                <caption>Max height</caption>
+                <description>Maximum rendered image height in pixels. Use 0 for no maximum.</description>
+            </property>
+        </propertyGroup>
+
+        <propertyGroup caption="Output attributes">
+            <property key="crop_x1" type="attribute" required="true">
+                <caption>Crop X1</caption>
+                <description>Left coordinate of crop selection.</description>
+                <attributeTypes>
+                    <attributeType name="Integer" />
+                    <attributeType name="Long" />
+                </attributeTypes>
+            </property>
+            <property key="crop_y1" type="attribute" required="true">
+                <caption>Crop Y1</caption>
+                <description>Top coordinate of crop selection.</description>
+                <attributeTypes>
+                    <attributeType name="Integer" />
+                    <attributeType name="Long" />
+                </attributeTypes>
+            </property>
+            <property key="crop_x2" type="attribute" required="true">
+                <caption>Crop X2</caption>
+                <description>Right coordinate of crop selection.</description>
+                <attributeTypes>
+                    <attributeType name="Integer" />
+                    <attributeType name="Long" />
+                </attributeTypes>
+            </property>
+            <property key="crop_y2" type="attribute" required="true">
+                <caption>Crop Y2</caption>
+                <description>Bottom coordinate of crop selection.</description>
+                <attributeTypes>
+                    <attributeType name="Integer" />
+                    <attributeType name="Long" />
+                </attributeTypes>
+            </property>
+            <property key="crop_width" type="attribute" required="true">
+                <caption>Crop width</caption>
+                <description>Width of crop selection.</description>
+                <attributeTypes>
+                    <attributeType name="Integer" />
+                    <attributeType name="Long" />
+                </attributeTypes>
+            </property>
+            <property key="crop_height" type="attribute" required="true">
+                <caption>Crop height</caption>
+                <description>Height of crop selection.</description>
+                <attributeTypes>
+                    <attributeType name="Integer" />
+                    <attributeType name="Long" />
+                </attributeTypes>
+            </property>
+        </propertyGroup>
+
+        <propertyGroup caption="Label">
+            <systemProperty key="Label" />
+        </propertyGroup>
+        <propertyGroup caption="Conditional visibility">
+            <systemProperty key="Visibility" />
+        </propertyGroup>
+        <propertyGroup caption="Editability">
+            <systemProperty key="Editability" />
+        </propertyGroup>
+    </properties>
+</widget>

@@ -1,0 +1,46 @@
+{
+    "name": "olari.imagecropper",
+    "widgetName": "ImageCropper",
+    "version": "1.0.0",
+    "description": "Image cropper pluggable widget for Mendix.",
+    "author": "Olari",
+    "license": "MIT",
+    "engines": {
+        "node": ">=16"
+    },
+    "mxpackage": {
+        "name": "olari.imagecropper",
+        "type": "widget",
+        "mpkName": "olari.imagecropper.mpk"
+    },
+    "packagePath": "olari.imagecropper",
+    "scripts": {
+        "start": "pluggable-widgets-tools start:server",
+        "dev": "pluggable-widgets-tools start:web",
+        "build": "pluggable-widgets-tools build:web",
+        "lint": "pluggable-widgets-tools lint",
+        "lint:fix": "pluggable-widgets-tools lint:fix",
+        "release": "pluggable-widgets-tools release:web"
+    },
+    "dependencies": {
+        "big.js": "^6.2.2"
+    },
+    "devDependencies": {
+        "@mendix/pluggable-widgets-tools": "^11.6.0"
+    },
+    "config": {
+        "projectPath": "C:\\Users\\willi\\Mendix\\Olari-main_3",
+        "mendixHost": "http://localhost:8080",
+        "developmentPort": 3007
+    },
+    "resolutions": {
+        "react": "19.0.0",
+        "@types/react": "19.0.0",
+        "react-native": "0.78.2"
+    },
+    "overrides": {
+        "react": "19.0.0",
+        "@types/react": "19.0.0",
+        "react-native": "0.78.2"
+    }
+}

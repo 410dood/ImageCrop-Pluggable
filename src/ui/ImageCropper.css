@@ -1,0 +1,72 @@
+.image-cropper {
+    display: inline-block;
+    max-width: 100%;
+}
+
+.image-cropper__message {
+    padding: 8px 10px;
+    font-size: 13px;
+    color: #5f6a77;
+}
+
+.image-cropper__canvas {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+}
+
+.image-cropper__image {
+    display: block;
+}
+
+.image-cropper__shade {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.image-cropper__selection {
+    position: absolute;
+    border: 1px solid #ffffff;
+    box-shadow: 0 0 0 10000px rgba(0, 0, 0, 0);
+    z-index: 3;
+    cursor: move;
+}
+
+.image-cropper__handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border: 1px solid #1f2a37;
+    background: #ffffff;
+    padding: 0;
+    z-index: 4;
+}
+
+.image-cropper__handle--nw {
+    left: -6px;
+    top: -6px;
+    cursor: nwse-resize;
+}
+
+.image-cropper__handle--ne {
+    right: -6px;
+    top: -6px;
+    cursor: nesw-resize;
+}
+
+.image-cropper__handle--se {
+    right: -6px;
+    bottom: -6px;
+    cursor: nwse-resize;
+}
+
+.image-cropper__handle--sw {
+    left: -6px;
+    bottom: -6px;
+    cursor: nesw-resize;
+}
