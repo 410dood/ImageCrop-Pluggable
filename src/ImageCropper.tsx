@@ -80,6 +80,160 @@ const rootStyle: CSSProperties = {
   maxWidth: "100%"
 };
 
+const reactCropBaseCss = `
+@keyframes imagecropper-marching-ants {
+  0% { background-position: 0 0, 0 100%, 0 0, 100% 0; }
+  100% { background-position: 20px 0, -20px 100%, 0 -20px, 100% 20px; }
+}
+.image-cropper .ReactCrop {
+  --rc-drag-handle-size: 14px;
+  --rc-drag-handle-mobile-size: 22px;
+  --rc-drag-handle-bg-colour: rgba(255, 255, 255, 0.95);
+  --rc-drag-bar-size: 6px;
+  --rc-border-color: rgba(255, 255, 255, 0.85);
+  --rc-focus-color: #0f62fe;
+  position: relative;
+  display: inline-block;
+  cursor: crosshair;
+  max-width: 100%;
+}
+.image-cropper .ReactCrop *,
+.image-cropper .ReactCrop *::before,
+.image-cropper .ReactCrop *::after {
+  box-sizing: border-box;
+}
+.image-cropper .ReactCrop--disabled,
+.image-cropper .ReactCrop--locked {
+  cursor: inherit;
+}
+.image-cropper .ReactCrop__child-wrapper {
+  overflow: hidden;
+  max-height: inherit;
+}
+.image-cropper .ReactCrop__child-wrapper > img,
+.image-cropper .ReactCrop__child-wrapper > video {
+  display: block;
+  max-width: 100%;
+  max-height: inherit;
+}
+.image-cropper .ReactCrop:not(.ReactCrop--disabled) .ReactCrop__child-wrapper > img,
+.image-cropper .ReactCrop:not(.ReactCrop--disabled) .ReactCrop__child-wrapper > video,
+.image-cropper .ReactCrop:not(.ReactCrop--disabled) .ReactCrop__crop-selection {
+  touch-action: none;
+}
+.image-cropper .ReactCrop__crop-mask {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  width: calc(100% + 0.5px);
+  height: calc(100% + 0.5px);
+}
+.image-cropper .ReactCrop__crop-selection {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translateZ(0);
+  cursor: move;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.45);
+}
+.image-cropper .ReactCrop--disabled .ReactCrop__crop-selection {
+  cursor: inherit;
+}
+.image-cropper .ReactCrop__crop-selection:not(.ReactCrop--no-animate .ReactCrop__crop-selection) {
+  animation: imagecropper-marching-ants 1s linear infinite;
+  background-image:
+    linear-gradient(to right, #fff 50%, #1f2a37 50%),
+    linear-gradient(to right, #fff 50%, #1f2a37 50%),
+    linear-gradient(to bottom, #fff 50%, #1f2a37 50%),
+    linear-gradient(to bottom, #fff 50%, #1f2a37 50%);
+  background-size: 10px 1px, 10px 1px, 1px 10px, 1px 10px;
+  background-position: 0 0, 0 100%, 0 0, 100% 0;
+  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+  color: #fff;
+}
+.image-cropper .ReactCrop__crop-selection:focus {
+  outline: 2px solid var(--rc-focus-color);
+  outline-offset: -1px;
+}
+.image-cropper .ReactCrop--invisible-crop .ReactCrop__crop-mask,
+.image-cropper .ReactCrop--invisible-crop .ReactCrop__crop-selection {
+  display: none;
+}
+.image-cropper .ReactCrop__rule-of-thirds-vt::before,
+.image-cropper .ReactCrop__rule-of-thirds-vt::after,
+.image-cropper .ReactCrop__rule-of-thirds-hz::before,
+.image-cropper .ReactCrop__rule-of-thirds-hz::after {
+  content: "";
+  display: block;
+  position: absolute;
+  background-color: rgba(255, 255, 255, 0.7);
+}
+.image-cropper .ReactCrop__rule-of-thirds-vt::before,
+.image-cropper .ReactCrop__rule-of-thirds-vt::after {
+  width: 1px;
+  height: 100%;
+}
+.image-cropper .ReactCrop__rule-of-thirds-vt::before { left: 33.3333333333%; }
+.image-cropper .ReactCrop__rule-of-thirds-vt::after { left: 66.6666666667%; }
+.image-cropper .ReactCrop__rule-of-thirds-hz::before,
+.image-cropper .ReactCrop__rule-of-thirds-hz::after {
+  width: 100%;
+  height: 1px;
+}
+.image-cropper .ReactCrop__rule-of-thirds-hz::before { top: 33.3333333333%; }
+.image-cropper .ReactCrop__rule-of-thirds-hz::after { top: 66.6666666667%; }
+.image-cropper .ReactCrop__drag-handle {
+  position: absolute;
+  width: var(--rc-drag-handle-size);
+  height: var(--rc-drag-handle-size);
+  background-color: var(--rc-drag-handle-bg-colour);
+  border: 2px solid #1f2a37;
+}
+.image-cropper .ReactCrop__drag-handle:focus {
+  background: var(--rc-focus-color);
+}
+.image-cropper .ReactCrop .ord-nw { top: 0; left: 0; transform: translate(-50%, -50%); cursor: nw-resize; }
+.image-cropper .ReactCrop .ord-n { top: 0; left: 50%; transform: translate(-50%, -50%); cursor: n-resize; }
+.image-cropper .ReactCrop .ord-ne { top: 0; right: 0; transform: translate(50%, -50%); cursor: ne-resize; }
+.image-cropper .ReactCrop .ord-e { top: 50%; right: 0; transform: translate(50%, -50%); cursor: e-resize; }
+.image-cropper .ReactCrop .ord-se { bottom: 0; right: 0; transform: translate(50%, 50%); cursor: se-resize; }
+.image-cropper .ReactCrop .ord-s { bottom: 0; left: 50%; transform: translate(-50%, 50%); cursor: s-resize; }
+.image-cropper .ReactCrop .ord-sw { bottom: 0; left: 0; transform: translate(-50%, 50%); cursor: sw-resize; }
+.image-cropper .ReactCrop .ord-w { top: 50%; left: 0; transform: translate(-50%, -50%); cursor: w-resize; }
+.image-cropper .ReactCrop__drag-bar {
+  position: absolute;
+}
+.image-cropper .ReactCrop__drag-bar.ord-n { top: 0; left: 0; width: 100%; height: var(--rc-drag-bar-size); transform: translateY(-50%); }
+.image-cropper .ReactCrop__drag-bar.ord-e { top: 0; right: 0; width: var(--rc-drag-bar-size); height: 100%; transform: translate(50%); }
+.image-cropper .ReactCrop__drag-bar.ord-s { bottom: 0; left: 0; width: 100%; height: var(--rc-drag-bar-size); transform: translateY(50%); }
+.image-cropper .ReactCrop__drag-bar.ord-w { top: 0; left: 0; width: var(--rc-drag-bar-size); height: 100%; transform: translate(-50%); }
+.image-cropper .ReactCrop--new-crop .ReactCrop__drag-bar,
+.image-cropper .ReactCrop--new-crop .ReactCrop__drag-handle,
+.image-cropper .ReactCrop--fixed-aspect .ReactCrop__drag-bar,
+.image-cropper .ReactCrop--fixed-aspect .ReactCrop__drag-handle.ord-n,
+.image-cropper .ReactCrop--fixed-aspect .ReactCrop__drag-handle.ord-e,
+.image-cropper .ReactCrop--fixed-aspect .ReactCrop__drag-handle.ord-s,
+.image-cropper .ReactCrop--fixed-aspect .ReactCrop__drag-handle.ord-w {
+  display: none;
+}
+@media (pointer: coarse) {
+  .image-cropper .ReactCrop .ord-n,
+  .image-cropper .ReactCrop .ord-e,
+  .image-cropper .ReactCrop .ord-s,
+  .image-cropper .ReactCrop .ord-w {
+    display: none;
+  }
+  .image-cropper .ReactCrop__drag-handle {
+    width: var(--rc-drag-handle-mobile-size);
+    height: var(--rc-drag-handle-mobile-size);
+  }
+}
+`;
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -546,6 +700,7 @@ export default function ImageCropper(
 
   return (
     <div className="image-cropper" tabIndex={props.tabIndex} style={rootStyle}>
+      <style>{reactCropBaseCss}</style>
       {props.image.status === "loading" ? (
         <div style={messageStyle}>Loading image...</div>
       ) : null}
