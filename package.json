@@ -11,7 +11,7 @@
     "mxpackage": {
         "name": "olari.imagecropper",
         "type": "widget",
-        "mpkName": "olari.imagecropper.mpk"
+        "mpkName": "olari.ImageCropper.mpk"
     },
     "packagePath": "olari",
     "scripts": {
