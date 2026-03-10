@@ -63,11 +63,6 @@ const primaryButtonStyle: CSSProperties = {
   color: "#ffffff"
 };
 
-const disabledButtonStyle: CSSProperties = {
-  opacity: 0.55,
-  cursor: "not-allowed"
-};
-
 const hintStyle: CSSProperties = {
   fontSize: "12px",
   color: "#5f6a77"
@@ -81,10 +76,6 @@ const rootStyle: CSSProperties = {
 };
 
 const reactCropBaseCss = `
-@keyframes imagecropper-marching-ants {
-  0% { background-position: 0 0, 0 100%, 0 0, 100% 0; }
-  100% { background-position: 20px 0, -20px 100%, 0 -20px, 100% 20px; }
-}
 .image-cropper .ReactCrop {
   --rc-drag-handle-size: 14px;
   --rc-drag-handle-mobile-size: 22px;
@@ -137,23 +128,11 @@ const reactCropBaseCss = `
   left: 0;
   transform: translateZ(0);
   cursor: move;
-  border: 2px solid #ffffff;
-  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.45);
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.32);
 }
 .image-cropper .ReactCrop--disabled .ReactCrop__crop-selection {
   cursor: inherit;
-}
-.image-cropper .ReactCrop__crop-selection:not(.ReactCrop--no-animate .ReactCrop__crop-selection) {
-  animation: imagecropper-marching-ants 1s linear infinite;
-  background-image:
-    linear-gradient(to right, #fff 50%, #1f2a37 50%),
-    linear-gradient(to right, #fff 50%, #1f2a37 50%),
-    linear-gradient(to bottom, #fff 50%, #1f2a37 50%),
-    linear-gradient(to bottom, #fff 50%, #1f2a37 50%);
-  background-size: 10px 1px, 10px 1px, 1px 10px, 1px 10px;
-  background-position: 0 0, 0 100%, 0 0, 100% 0;
-  background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
-  color: #fff;
 }
 .image-cropper .ReactCrop__crop-selection:focus {
   outline: 2px solid var(--rc-focus-color);
@@ -664,15 +643,6 @@ export default function ImageCropper(
     [isCoarsePointer]
   );
 
-  const dynamicButtonStyle = useMemo<CSSProperties>(
-    () => ({
-      ...buttonStyle,
-      minHeight: isCoarsePointer ? "42px" : undefined,
-      padding: isCoarsePointer ? "10px 14px" : buttonStyle.padding
-    }),
-    [isCoarsePointer]
-  );
-
   const noImage = props.image.status === "available" && !imageUri;
   const canRunApplyAction =
     !!props.onApplyAction?.canExecute &&
@@ -681,14 +651,6 @@ export default function ImageCropper(
     !!naturalBounds &&
     props.image.status === "available" &&
     !!imageUri;
-
-  const resetSelection = useCallback(() => {
-    if (!bounds || !naturalBounds) {
-      return;
-    }
-
-    setCrop(getDefaultCrop(props, bounds, naturalBounds, aspectRatio));
-  }, [aspectRatio, bounds, naturalBounds, props]);
 
   const applySelection = useCallback(() => {
     if (!canRunApplyAction) {
@@ -741,7 +703,11 @@ export default function ImageCropper(
                 style={
                   canRunApplyAction
                     ? dynamicPrimaryButtonStyle
-                    : { ...dynamicPrimaryButtonStyle, ...disabledButtonStyle }
+                    : {
+                        ...dynamicPrimaryButtonStyle,
+                        opacity: 0.55,
+                        cursor: "not-allowed"
+                      }
                 }
                 onClick={applySelection}
                 disabled={!canRunApplyAction}
@@ -749,18 +715,6 @@ export default function ImageCropper(
                 Apply selection
               </button>
             ) : null}
-            <button
-              type="button"
-              style={
-                bounds && naturalBounds
-                  ? dynamicButtonStyle
-                  : { ...dynamicButtonStyle, ...disabledButtonStyle }
-              }
-              onClick={resetSelection}
-              disabled={!bounds || !naturalBounds}
-            >
-              Reset selection
-            </button>
             <span style={hintStyle}>
               Crop coordinates update automatically as the selection changes.
             </span>
