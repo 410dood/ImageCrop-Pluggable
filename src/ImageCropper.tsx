@@ -77,11 +77,11 @@ const rootStyle: CSSProperties = {
 
 const reactCropBaseCss = `
 .image-cropper .ReactCrop {
-  --rc-drag-handle-size: 7px;
-  --rc-drag-handle-mobile-size: 16px;
-  --rc-drag-handle-bg-colour: #333333;
+  --rc-drag-handle-size: 14px;
+  --rc-drag-handle-mobile-size: 22px;
+  --rc-drag-handle-bg-colour: rgba(255, 255, 255, 0.95);
   --rc-drag-bar-size: 6px;
-  --rc-border-color: rgba(255, 255, 255, 0.9);
+  --rc-border-color: rgba(255, 255, 255, 0.85);
   --rc-focus-color: #0f62fe;
   position: relative;
   display: inline-block;
@@ -128,8 +128,8 @@ const reactCropBaseCss = `
   left: 0;
   transform: translateZ(0);
   cursor: move;
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.32);
 }
 .image-cropper .ReactCrop--disabled .ReactCrop__crop-selection {
   cursor: inherit;
@@ -170,8 +170,7 @@ const reactCropBaseCss = `
   width: var(--rc-drag-handle-size);
   height: var(--rc-drag-handle-size);
   background-color: var(--rc-drag-handle-bg-colour);
-  border: 1px solid #eeeeee;
-  border-radius: 3px;
+  border: 2px solid #1f2a37;
 }
 .image-cropper .ReactCrop__drag-handle:focus {
   background: var(--rc-focus-color);
@@ -186,7 +185,6 @@ const reactCropBaseCss = `
 .image-cropper .ReactCrop .ord-w { top: 50%; left: 0; transform: translate(-50%, -50%); cursor: w-resize; }
 .image-cropper .ReactCrop__drag-bar {
   position: absolute;
-  background: transparent;
 }
 .image-cropper .ReactCrop__drag-bar.ord-n { top: 0; left: 0; width: 100%; height: var(--rc-drag-bar-size); transform: translateY(-50%); }
 .image-cropper .ReactCrop__drag-bar.ord-e { top: 0; right: 0; width: var(--rc-drag-bar-size); height: 100%; transform: translate(50%); }
@@ -681,6 +679,7 @@ export default function ImageCropper(
             minWidth={1}
             minHeight={1}
             keepSelection
+            ruleOfThirds
             onChange={(nextCrop) => {
               setCrop(normalizeCrop(nextCrop));
             }}
