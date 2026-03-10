@@ -3,8 +3,9 @@
 ## Unreleased
 
 - Switched the crop UI to `react-image-crop` for more reliable mouse and touch behavior.
-- Added Mendix module companion under `mendix-module/ImageCropper` with Java action template and reusable crop support.
-- Updated README with server-side crop persistence guidance and `On apply` wiring.
+- Removed the `On apply` action from the widget contract and runtime.
+- Consolidated runtime crop styling into the widget code path used by Mendix packaging.
+- Removed the bundled Java companion module from this repository.
 
 ## 1.0.0
 

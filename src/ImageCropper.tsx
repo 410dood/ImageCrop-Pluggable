@@ -37,33 +37,9 @@ const messageStyle: CSSProperties = {
   color: "#5f6a77"
 };
 
-const actionBarStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  marginTop: "10px",
-  flexWrap: "wrap"
-};
-
-const buttonStyle: CSSProperties = {
-  appearance: "none",
-  border: "1px solid #1f2a37",
-  borderRadius: "4px",
-  background: "#ffffff",
-  color: "#1f2a37",
-  padding: "6px 10px",
-  fontSize: "13px",
-  lineHeight: 1.2,
-  cursor: "pointer"
-};
-
-const primaryButtonStyle: CSSProperties = {
-  ...buttonStyle,
-  background: "#1f2a37",
-  color: "#ffffff"
-};
-
 const runtimeStyleElementId = "olari-imagecropper-runtime-styles";
+// Mendix is not reliably loading packaged widget CSS for this widget,
+// so the runtime crop UI styles live here as the single source of truth.
 const runtimeCropStyles = `
 .image-cropper {
   display: flex;
@@ -85,22 +61,6 @@ const runtimeCropStyles = `
 .image-cropper--align-right {
   align-items: flex-end;
   text-align: right;
-}
-
-.image-cropper__actions {
-  width: 100%;
-}
-
-.image-cropper--align-left .image-cropper__actions {
-  justify-content: flex-start;
-}
-
-.image-cropper--align-center .image-cropper__actions {
-  justify-content: center;
-}
-
-.image-cropper--align-right .image-cropper__actions {
-  justify-content: flex-end;
 }
 
 .image-cropper .ReactCrop {
@@ -149,7 +109,6 @@ const runtimeCropStyles = `
   transform: translateZ(0);
   cursor: move;
   border: 2px dashed #4076f4;
-  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.32);
 }
 
 .image-cropper .ReactCrop--disabled .ReactCrop__crop-selection,
@@ -521,17 +480,6 @@ function getDefaultCrop(
   );
 }
 
-function isCoarsePointerDevice(): boolean {
-  if (
-    typeof window === "undefined" ||
-    typeof window.matchMedia !== "function"
-  ) {
-    return false;
-  }
-
-  return window.matchMedia("(pointer: coarse)").matches;
-}
-
 export default function ImageCropper(
   props: ImageCropperContainerProps
 ): ReactElement {
@@ -541,7 +489,6 @@ export default function ImageCropper(
   const [bounds, setBounds] = useState<Bounds | null>(null);
   const [naturalBounds, setNaturalBounds] = useState<Bounds | null>(null);
   const [crop, setCrop] = useState<PixelCrop>();
-  const [isCoarsePointer, setIsCoarsePointer] = useState(isCoarsePointerDevice);
 
   const aspectRatio = useMemo(
     () => parseAspectRatio(props.aspectRatio?.value),
@@ -688,34 +635,6 @@ export default function ImageCropper(
     };
   }, [imageUri, updateBounds]);
 
-  useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      typeof window.matchMedia !== "function"
-    ) {
-      return;
-    }
-
-    const mediaQuery = window.matchMedia("(pointer: coarse)");
-    const updatePointerMode = () => {
-      setIsCoarsePointer(mediaQuery.matches);
-    };
-
-    updatePointerMode();
-
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", updatePointerMode);
-      return () => {
-        mediaQuery.removeEventListener("change", updatePointerMode);
-      };
-    }
-
-    mediaQuery.addListener(updatePointerMode);
-    return () => {
-      mediaQuery.removeListener(updatePointerMode);
-    };
-  }, []);
-
   const imageStyle = useMemo<CSSProperties>(
     () => ({
       display: "block",
@@ -727,39 +646,7 @@ export default function ImageCropper(
     [props.cropheight, props.cropwidth]
   );
 
-  const dynamicActionBarStyle = useMemo<CSSProperties>(
-    () => ({
-      ...actionBarStyle,
-      gap: isCoarsePointer ? "10px" : actionBarStyle.gap
-    }),
-    [isCoarsePointer]
-  );
-
-  const dynamicPrimaryButtonStyle = useMemo<CSSProperties>(
-    () => ({
-      ...primaryButtonStyle,
-      minHeight: isCoarsePointer ? "42px" : undefined,
-      padding: isCoarsePointer ? "10px 14px" : primaryButtonStyle.padding
-    }),
-    [isCoarsePointer]
-  );
-
   const noImage = props.image.status === "available" && !imageUri;
-  const canRunApplyAction =
-    !!props.onApplyAction?.canExecute &&
-    !!crop &&
-    !!bounds &&
-    !!naturalBounds &&
-    props.image.status === "available" &&
-    !!imageUri;
-
-  const applySelection = useCallback(() => {
-    if (!canRunApplyAction) {
-      return;
-    }
-
-    props.onApplyAction?.execute();
-  }, [canRunApplyAction, props.onApplyAction]);
 
   const rootClassName = useMemo(
     () => `image-cropper image-cropper--align-${props.contentAlignment}`,
@@ -800,26 +687,6 @@ export default function ImageCropper(
               onDragStart={(event) => event.preventDefault()}
             />
           </ReactCrop>
-          <div className="image-cropper__actions" style={dynamicActionBarStyle}>
-            {props.onApplyAction ? (
-              <button
-                type="button"
-                style={
-                  canRunApplyAction
-                    ? dynamicPrimaryButtonStyle
-                    : {
-                        ...dynamicPrimaryButtonStyle,
-                        opacity: 0.55,
-                        cursor: "not-allowed"
-                      }
-                }
-                onClick={applySelection}
-                disabled={!canRunApplyAction}
-              >
-                Apply selection
-              </button>
-            ) : null}
-          </div>
         </>
       ) : null}
     </div>

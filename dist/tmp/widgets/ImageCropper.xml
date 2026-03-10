@@ -107,13 +107,6 @@
             </property>
         </propertyGroup>
 
-        <propertyGroup caption="Actions">
-            <property key="onApplyAction" type="action" required="false">
-                <caption>On apply</caption>
-                <description>Optional action to run after the crop selection has been updated.</description>
-            </property>
-        </propertyGroup>
-
         <propertyGroup caption="Label">
             <systemProperty key="Label" />
         </propertyGroup>

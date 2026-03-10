@@ -1,6 +1,6 @@
 # ImageCropper
 
-`olari.imagecropper` is a Mendix pluggable web widget that replicates legacy ImageCrop behavior with a modern crop UI and an optional Java companion for persistent image cropping.
+`olari.imagecropper` is a Mendix pluggable web widget that replicates legacy ImageCrop behavior with a modern crop UI.
 
 ## Features
 
@@ -10,7 +10,7 @@
 - Writes selection coordinates and size:
   - `crop_x1`, `crop_y1`, `crop_x2`, `crop_y2`
   - `crop_width`, `crop_height`
-- Optional `On apply` action hook for server-side crop persistence
+- Mobile-friendly corner handles with dashed crop border
 
 ## Widget Properties
 
@@ -18,8 +18,8 @@
 - `aspectRatio` (optional): string/enum attribute with ratio text
 - `startwidth`, `startheight`: initial crop rectangle size
 - `cropwidth`, `cropheight`: display max width/height (0 = no max)
+- `contentAlignment`: left, center, or right alignment for the cropper content
 - output attributes for crop coordinates and dimensions
-- `onApplyAction` (optional): execute a microflow/nanoflow after selection is confirmed
 
 ## Build and Release
 
@@ -33,15 +33,3 @@ npm run release
 Release output:
 
 - `dist/1.0.0/olari.ImageCropper.mpk`
-
-## Persistent Cropping
-
-The widget itself is Studio Pro compatible and frontend-only. For actual image mutation, use the companion module in:
-
-- `mendix-module/ImageCropper`
-
-That companion includes:
-
-- a Java action template
-- a reusable image crop implementation
-- setup instructions for wiring `On apply` to crop and overwrite the same `System.Image`
