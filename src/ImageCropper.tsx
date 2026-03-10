@@ -63,6 +63,243 @@ const primaryButtonStyle: CSSProperties = {
   color: "#ffffff"
 };
 
+const runtimeStyleElementId = "olari-imagecropper-runtime-styles";
+const runtimeCropStyles = `
+.image-cropper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+}
+
+.image-cropper--align-left {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.image-cropper--align-center {
+  align-items: center;
+  text-align: center;
+}
+
+.image-cropper--align-right {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.image-cropper__actions {
+  width: 100%;
+}
+
+.image-cropper--align-left .image-cropper__actions {
+  justify-content: flex-start;
+}
+
+.image-cropper--align-center .image-cropper__actions {
+  justify-content: center;
+}
+
+.image-cropper--align-right .image-cropper__actions {
+  justify-content: flex-end;
+}
+
+.image-cropper .ReactCrop {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  cursor: crosshair;
+}
+
+.image-cropper .ReactCrop,
+.image-cropper .ReactCrop *,
+.image-cropper .ReactCrop *::before,
+.image-cropper .ReactCrop *::after {
+  box-sizing: border-box;
+}
+
+.image-cropper .ReactCrop__child-wrapper {
+  overflow: hidden;
+}
+
+.image-cropper .ReactCrop__child-wrapper > img,
+.image-cropper .ReactCrop__child-wrapper > video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.image-cropper .ReactCrop:not(.ReactCrop--disabled) .ReactCrop__child-wrapper > img,
+.image-cropper .ReactCrop:not(.ReactCrop--disabled) .ReactCrop__child-wrapper > video,
+.image-cropper .ReactCrop:not(.ReactCrop--disabled) .ReactCrop__crop-selection {
+  touch-action: none;
+}
+
+.image-cropper .ReactCrop__crop-mask {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  width: calc(100% + 0.5px);
+  height: calc(100% + 0.5px);
+}
+
+.image-cropper .ReactCrop__crop-selection {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translateZ(0);
+  cursor: move;
+  border: 2px dashed #4076f4;
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.32);
+}
+
+.image-cropper .ReactCrop--disabled .ReactCrop__crop-selection,
+.image-cropper .ReactCrop--locked .ReactCrop__crop-selection {
+  cursor: inherit;
+}
+
+.image-cropper .ReactCrop__crop-selection:focus {
+  outline: 1px solid #4076f4;
+  outline-offset: 0;
+}
+
+.image-cropper .ReactCrop--invisible-crop .ReactCrop__crop-mask,
+.image-cropper .ReactCrop--invisible-crop .ReactCrop__crop-selection {
+  display: none;
+}
+
+.image-cropper .ReactCrop__drag-bar,
+.image-cropper .ReactCrop__drag-handle.ord-n,
+.image-cropper .ReactCrop__drag-handle.ord-e,
+.image-cropper .ReactCrop__drag-handle.ord-s,
+.image-cropper .ReactCrop__drag-handle.ord-w {
+  display: none !important;
+}
+
+.image-cropper .ReactCrop__drag-handle {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: 0;
+}
+
+.image-cropper .ReactCrop__drag-handle::before,
+.image-cropper .ReactCrop__drag-handle::after {
+  content: "";
+  position: absolute;
+  display: block;
+  background: transparent;
+  border-radius: 5px;
+}
+
+.image-cropper .ReactCrop .ord-nw {
+  top: 0;
+  left: 0;
+  transform: translate(-35%, -35%);
+  cursor: nw-resize;
+}
+
+.image-cropper .ReactCrop .ord-nw::before {
+  top: 0;
+  left: 0;
+  width: 24px;
+  border-top: 8px solid #4076f4;
+}
+
+.image-cropper .ReactCrop .ord-nw::after {
+  top: 0;
+  left: 0;
+  height: 24px;
+  border-left: 8px solid #4076f4;
+}
+
+.image-cropper .ReactCrop .ord-ne {
+  top: 0;
+  right: 0;
+  transform: translate(35%, -35%);
+  cursor: ne-resize;
+}
+
+.image-cropper .ReactCrop .ord-ne::before {
+  top: 0;
+  right: 0;
+  width: 24px;
+  border-top: 8px solid #4076f4;
+}
+
+.image-cropper .ReactCrop .ord-ne::after {
+  top: 0;
+  right: 0;
+  height: 24px;
+  border-right: 8px solid #4076f4;
+}
+
+.image-cropper .ReactCrop .ord-se {
+  right: 0;
+  bottom: 0;
+  transform: translate(35%, 35%);
+  cursor: se-resize;
+}
+
+.image-cropper .ReactCrop .ord-se::before {
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  border-bottom: 8px solid #4076f4;
+}
+
+.image-cropper .ReactCrop .ord-se::after {
+  right: 0;
+  bottom: 0;
+  height: 24px;
+  border-right: 8px solid #4076f4;
+}
+
+.image-cropper .ReactCrop .ord-sw {
+  left: 0;
+  bottom: 0;
+  transform: translate(-35%, 35%);
+  cursor: sw-resize;
+}
+
+.image-cropper .ReactCrop .ord-sw::before {
+  left: 0;
+  bottom: 0;
+  width: 24px;
+  border-bottom: 8px solid #4076f4;
+}
+
+.image-cropper .ReactCrop .ord-sw::after {
+  left: 0;
+  bottom: 0;
+  height: 24px;
+  border-left: 8px solid #4076f4;
+}
+
+@media (pointer: coarse) {
+  .image-cropper .ReactCrop__drag-handle {
+    width: 34px;
+    height: 34px;
+  }
+
+  .image-cropper .ReactCrop .ord-nw::before,
+  .image-cropper .ReactCrop .ord-ne::before,
+  .image-cropper .ReactCrop .ord-se::before,
+  .image-cropper .ReactCrop .ord-sw::before {
+    width: 30px;
+    border-width: 10px;
+  }
+
+  .image-cropper .ReactCrop .ord-nw::after,
+  .image-cropper .ReactCrop .ord-ne::after,
+  .image-cropper .ReactCrop .ord-se::after,
+  .image-cropper .ReactCrop .ord-sw::after {
+    height: 30px;
+    border-width: 10px;
+  }
+}
+`;
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -348,6 +585,21 @@ export default function ImageCropper(
   }, []);
 
   useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    if (document.getElementById(runtimeStyleElementId)) {
+      return;
+    }
+
+    const styleElement = document.createElement("style");
+    styleElement.id = runtimeStyleElementId;
+    styleElement.textContent = runtimeCropStyles;
+    document.head.appendChild(styleElement);
+  }, []);
+
+  useEffect(() => {
     if (!imageUri) {
       initializedForKeyRef.current = "";
       setBounds(null);
@@ -532,7 +784,6 @@ export default function ImageCropper(
             minWidth={1}
             minHeight={1}
             keepSelection
-            ruleOfThirds
             onChange={(nextCrop) => {
               setCrop(normalizeCrop(nextCrop));
             }}
