@@ -10,21 +10,12 @@ import {
   useState
 } from "react";
 import { EditableValue, WebImage } from "mendix";
+import ReactCrop, {
+  makeAspectCrop,
+  type Crop,
+  type PixelCrop
+} from "react-image-crop";
 import { ImageCropperContainerProps } from "../typings/ImageCropperProps";
-
-type CornerHandle = "nw" | "ne" | "se" | "sw";
-
-interface Point {
-  x: number;
-  y: number;
-}
-
-interface Rect {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
 
 interface Bounds {
   w: number;
@@ -40,62 +31,10 @@ interface SourceRect {
   h: number;
 }
 
-type Interaction =
-  | {
-      mode: "draw";
-      anchor: Point;
-    }
-  | {
-      mode: "move";
-      startPointer: Point;
-      startRect: Rect;
-    }
-  | {
-      mode: "resize";
-      anchor: Point;
-      dirX: -1 | 1;
-      dirY: -1 | 1;
-    };
-
-const HANDLE_DIRECTION: Record<CornerHandle, { dirX: -1 | 1; dirY: -1 | 1 }> = {
-  nw: { dirX: -1, dirY: -1 },
-  ne: { dirX: 1, dirY: -1 },
-  se: { dirX: 1, dirY: 1 },
-  sw: { dirX: -1, dirY: 1 }
-};
-
 const messageStyle: CSSProperties = {
   padding: "8px 10px",
   fontSize: "13px",
   color: "#5f6a77"
-};
-
-const canvasStyle: CSSProperties = {
-  position: "relative",
-  display: "inline-block",
-  lineHeight: 0,
-  overflow: "hidden",
-  touchAction: "none",
-  userSelect: "none"
-};
-
-const imageBaseStyle: CSSProperties = {
-  display: "block"
-};
-
-const shadeBaseStyle: CSSProperties = {
-  position: "absolute",
-  background: "rgba(0, 0, 0, 0.4)",
-  pointerEvents: "none",
-  zIndex: 2
-};
-
-const selectionBaseStyle: CSSProperties = {
-  position: "absolute",
-  border: "1px solid #ffffff",
-  boxSizing: "border-box",
-  zIndex: 3,
-  cursor: "move"
 };
 
 const actionBarStyle: CSSProperties = {
@@ -141,33 +80,21 @@ const rootStyle: CSSProperties = {
   maxWidth: "100%"
 };
 
-const handleBaseStyle: CSSProperties = {
-  position: "absolute",
-  width: "10px",
-  height: "10px",
-  border: "1px solid #1f2a37",
-  background: "#ffffff",
-  padding: 0,
-  zIndex: 4
-};
-
-const handleStyles: Record<CornerHandle, CSSProperties> = {
-  nw: { left: "-6px", top: "-6px", cursor: "nwse-resize" },
-  ne: { right: "-6px", top: "-6px", cursor: "nesw-resize" },
-  se: { right: "-6px", bottom: "-6px", cursor: "nwse-resize" },
-  sw: { left: "-6px", bottom: "-6px", cursor: "nesw-resize" }
-};
-
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function roundRect(rect: Rect): Rect {
+function roundNumber(value: number | undefined): number {
+  return Math.round(value ?? 0);
+}
+
+function normalizeCrop(crop: Partial<Crop>): PixelCrop {
   return {
-    x: Math.round(rect.x),
-    y: Math.round(rect.y),
-    w: Math.round(rect.w),
-    h: Math.round(rect.h)
+    unit: "px",
+    x: roundNumber(crop.x),
+    y: roundNumber(crop.y),
+    width: Math.max(1, roundNumber(crop.width)),
+    height: Math.max(1, roundNumber(crop.height))
   };
 }
 
@@ -205,32 +132,40 @@ function setInteger(attribute: EditableValue<Big>, value: number): void {
 }
 
 function getImageUri(image: WebImage | undefined): string | undefined {
-  if (!image) {
-    return undefined;
-  }
-  return image.uri;
+  return image?.uri;
 }
 
 function readBig(value: Big | undefined): number | undefined {
   if (!value) {
     return undefined;
   }
+
   const numberValue = Number(value.toString());
   return Number.isFinite(numberValue) ? numberValue : undefined;
 }
 
-function rectToSourceRect(
-  rect: Rect,
+function cropToSourceRect(
+  crop: Partial<Crop>,
   displayBounds: Bounds,
   naturalBounds: Bounds
-): SourceRect {
+): SourceRect | null {
+  const width = crop.width ?? 0;
+  const height = crop.height ?? 0;
+  if (
+    width <= 0 ||
+    height <= 0 ||
+    displayBounds.w <= 0 ||
+    displayBounds.h <= 0
+  ) {
+    return null;
+  }
+
   const scaleX = naturalBounds.w / displayBounds.w;
   const scaleY = naturalBounds.h / displayBounds.h;
-
-  const x1 = Math.round(rect.x * scaleX);
-  const y1 = Math.round(rect.y * scaleY);
-  const x2 = Math.round((rect.x + rect.w) * scaleX);
-  const y2 = Math.round((rect.y + rect.h) * scaleY);
+  const x1 = Math.round((crop.x ?? 0) * scaleX);
+  const y1 = Math.round((crop.y ?? 0) * scaleY);
+  const x2 = Math.round(((crop.x ?? 0) + width) * scaleX);
+  const y2 = Math.round(((crop.y ?? 0) + height) * scaleY);
 
   return {
     x1,
@@ -242,25 +177,32 @@ function rectToSourceRect(
   };
 }
 
-function sourceRectToDisplayRect(
+function sourceRectToCrop(
   sourceRect: SourceRect,
   displayBounds: Bounds,
   naturalBounds: Bounds
-): Rect {
+): PixelCrop {
   const scaleX = displayBounds.w / naturalBounds.w;
   const scaleY = displayBounds.h / naturalBounds.h;
 
-  const x = sourceRect.x1 * scaleX;
-  const y = sourceRect.y1 * scaleY;
-  const w = Math.max(1, sourceRect.w * scaleX);
-  const h = Math.max(1, sourceRect.h * scaleY);
+  const width = Math.max(1, Math.round(sourceRect.w * scaleX));
+  const height = Math.max(1, Math.round(sourceRect.h * scaleY));
 
-  return roundRect({
-    x: clamp(x, 0, displayBounds.w - w),
-    y: clamp(y, 0, displayBounds.h - h),
-    w: Math.min(w, displayBounds.w),
-    h: Math.min(h, displayBounds.h)
-  });
+  return {
+    unit: "px",
+    x: clamp(
+      Math.round(sourceRect.x1 * scaleX),
+      0,
+      Math.max(0, displayBounds.w - width)
+    ),
+    y: clamp(
+      Math.round(sourceRect.y1 * scaleY),
+      0,
+      Math.max(0, displayBounds.h - height)
+    ),
+    width: Math.min(width, displayBounds.w),
+    height: Math.min(height, displayBounds.h)
+  };
 }
 
 function readSourceRectFromAttributes(
@@ -289,12 +231,10 @@ function readSourceRectFromAttributes(
     resolvedW === undefined ||
     resolvedH === undefined ||
     resolvedX2 === undefined ||
-    resolvedY2 === undefined
+    resolvedY2 === undefined ||
+    resolvedW <= 0 ||
+    resolvedH <= 0
   ) {
-    return null;
-  }
-
-  if (resolvedW <= 0 || resolvedH <= 0) {
     return null;
   }
 
@@ -308,89 +248,56 @@ function readSourceRectFromAttributes(
   };
 }
 
-function createRectFromAnchor(
-  anchor: Point,
-  pointer: Point,
-  direction: { dirX: -1 | 1; dirY: -1 | 1 },
-  bounds: Bounds,
-  aspectRatio: number
-): Rect {
-  const maxW = direction.dirX > 0 ? bounds.w - anchor.x : anchor.x;
-  const maxH = direction.dirY > 0 ? bounds.h - anchor.y : anchor.y;
-
-  let w = direction.dirX > 0 ? pointer.x - anchor.x : anchor.x - pointer.x;
-  let h = direction.dirY > 0 ? pointer.y - anchor.y : anchor.y - pointer.y;
-  w = clamp(w, 1, maxW);
-  h = clamp(h, 1, maxH);
-
-  if (aspectRatio > 0) {
-    const progressX = w / Math.max(1, maxW);
-    const progressY = h / Math.max(1, maxH);
-    if (progressX >= progressY) {
-      h = w / aspectRatio;
-    } else {
-      w = h * aspectRatio;
-    }
-
-    if (w > maxW) {
-      w = maxW;
-      h = w / aspectRatio;
-    }
-    if (h > maxH) {
-      h = maxH;
-      w = h * aspectRatio;
-    }
-    w = Math.max(1, w);
-    h = Math.max(1, h);
-  }
-
-  const x = direction.dirX > 0 ? anchor.x : anchor.x - w;
-  const y = direction.dirY > 0 ? anchor.y : anchor.y - h;
-
-  return roundRect({
-    x: clamp(x, 0, bounds.w - w),
-    y: clamp(y, 0, bounds.h - h),
-    w,
-    h
-  });
-}
-
-function createInitialRect(
-  bounds: Bounds,
+function createInitialCrop(
+  displayBounds: Bounds,
+  aspectRatio: number,
   startWidth: number,
-  startHeight: number,
-  aspectRatio: number
-): Rect {
-  let w = clamp(startWidth || 100, 1, bounds.w);
-  let h = clamp(startHeight || 100, 1, bounds.h);
+  startHeight: number
+): PixelCrop {
+  const width = clamp(startWidth || 100, 1, displayBounds.w);
+  const height = clamp(startHeight || 100, 1, displayBounds.h);
 
   if (aspectRatio > 0) {
-    h = w / aspectRatio;
-    if (h > bounds.h) {
-      h = bounds.h;
-      w = h * aspectRatio;
-    }
+    return normalizeCrop(
+      makeAspectCrop(
+        {
+          unit: "px",
+          x: 0,
+          y: 0,
+          width
+        },
+        aspectRatio,
+        displayBounds.w,
+        displayBounds.h
+      )
+    );
   }
 
-  return roundRect({ x: 0, y: 0, w, h });
+  return {
+    unit: "px",
+    x: 0,
+    y: 0,
+    width,
+    height
+  };
 }
 
-function getDefaultSelectionRect(
+function getDefaultCrop(
   props: ImageCropperContainerProps,
   displayBounds: Bounds,
   naturalBounds: Bounds,
   aspectRatio: number
-): Rect {
+): PixelCrop {
   const sourceRect = readSourceRectFromAttributes(props, naturalBounds);
   if (sourceRect) {
-    return sourceRectToDisplayRect(sourceRect, displayBounds, naturalBounds);
+    return sourceRectToCrop(sourceRect, displayBounds, naturalBounds);
   }
 
-  return createInitialRect(
+  return createInitialCrop(
     displayBounds,
+    aspectRatio,
     props.startwidth,
-    props.startheight,
-    aspectRatio
+    props.startheight
   );
 }
 
@@ -409,15 +316,11 @@ export default function ImageCropper(
   props: ImageCropperContainerProps
 ): ReactElement {
   const imageRef = useRef<HTMLImageElement | null>(null);
-  const canvasRef = useRef<HTMLDivElement | null>(null);
-  const interactionRef = useRef<Interaction | null>(null);
-  const rectRef = useRef<Rect | null>(null);
   const initializedForKeyRef = useRef<string>("");
 
   const [bounds, setBounds] = useState<Bounds | null>(null);
   const [naturalBounds, setNaturalBounds] = useState<Bounds | null>(null);
-  const [rect, setRect] = useState<Rect | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [crop, setCrop] = useState<PixelCrop>();
   const [isCoarsePointer, setIsCoarsePointer] = useState(isCoarsePointerDevice);
 
   const aspectRatio = useMemo(
@@ -434,16 +337,24 @@ export default function ImageCropper(
     if (!image) {
       return;
     }
+
     const nextNatural = {
       w: image.naturalWidth || image.clientWidth,
       h: image.naturalHeight || image.clientHeight
     };
-    const next = { w: image.clientWidth, h: image.clientHeight };
-    if (next.w > 0 && next.h > 0) {
+    const nextBounds = {
+      w: image.clientWidth,
+      h: image.clientHeight
+    };
+
+    if (nextBounds.w > 0 && nextBounds.h > 0) {
       setBounds((current) =>
-        current && current.w === next.w && current.h === next.h ? current : next
+        current && current.w === nextBounds.w && current.h === nextBounds.h
+          ? current
+          : nextBounds
       );
     }
+
     if (nextNatural.w > 0 && nextNatural.h > 0) {
       setNaturalBounds((current) =>
         current && current.w === nextNatural.w && current.h === nextNatural.h
@@ -453,63 +364,40 @@ export default function ImageCropper(
     }
   }, []);
 
-  const toLocalPoint = useCallback(
-    (clientX: number, clientY: number): Point | null => {
-      const canvas = canvasRef.current;
-      const currentBounds = bounds;
-      if (!canvas || !currentBounds) {
-        return null;
-      }
-      const box = canvas.getBoundingClientRect();
-      return {
-        x: clamp(clientX - box.left, 0, currentBounds.w),
-        y: clamp(clientY - box.top, 0, currentBounds.h)
-      };
-    },
-    [bounds]
-  );
-
-  useEffect(() => {
-    rectRef.current = rect;
-  }, [rect]);
-
   useEffect(() => {
     if (!imageUri) {
       initializedForKeyRef.current = "";
-      setRect(null);
       setBounds(null);
       setNaturalBounds(null);
-      return;
+      setCrop(undefined);
     }
   }, [imageUri]);
 
   useEffect(() => {
     if (!bounds || !naturalBounds || !imageUri) {
-      setRect(null);
+      setCrop(undefined);
       return;
     }
-    const initializationKey = `${imageUri}:${bounds.w}x${bounds.h}:${naturalBounds.w}x${naturalBounds.h}`;
+
+    const initializationKey = `${imageUri}:${bounds.w}x${bounds.h}:${naturalBounds.w}x${naturalBounds.h}:${aspectRatio}`;
     if (initializedForKeyRef.current === initializationKey) {
       return;
     }
-    initializedForKeyRef.current = initializationKey;
 
-    setRect(getDefaultSelectionRect(props, bounds, naturalBounds, aspectRatio));
-  }, [
-    aspectRatio,
-    bounds,
-    imageUri,
-    naturalBounds,
-    props,
-    props.startheight,
-    props.startwidth
-  ]);
+    initializedForKeyRef.current = initializationKey;
+    setCrop(getDefaultCrop(props, bounds, naturalBounds, aspectRatio));
+  }, [aspectRatio, bounds, imageUri, naturalBounds, props]);
 
   useEffect(() => {
-    if (!rect || !bounds || !naturalBounds) {
+    if (!crop || !bounds || !naturalBounds) {
       return;
     }
-    const sourceRect = rectToSourceRect(rect, bounds, naturalBounds);
+
+    const sourceRect = cropToSourceRect(crop, bounds, naturalBounds);
+    if (!sourceRect) {
+      return;
+    }
+
     setInteger(props.crop_x1, sourceRect.x1);
     setInteger(props.crop_y1, sourceRect.y1);
     setInteger(props.crop_x2, sourceRect.x2);
@@ -518,14 +406,14 @@ export default function ImageCropper(
     setInteger(props.crop_height, sourceRect.h);
   }, [
     bounds,
+    crop,
     naturalBounds,
-    props.crop_x1,
-    props.crop_y1,
-    props.crop_x2,
-    props.crop_y2,
-    props.crop_width,
     props.crop_height,
-    rect
+    props.crop_width,
+    props.crop_x1,
+    props.crop_x2,
+    props.crop_y1,
+    props.crop_y2
   ]);
 
   useEffect(() => {
@@ -533,10 +421,12 @@ export default function ImageCropper(
     if (!image || typeof ResizeObserver === "undefined") {
       return;
     }
+
     const resizeObserver = new ResizeObserver(() => {
       updateBounds();
     });
     resizeObserver.observe(image);
+
     return () => {
       resizeObserver.disconnect();
     };
@@ -546,14 +436,17 @@ export default function ImageCropper(
     if (!imageUri) {
       return;
     }
+
     const image = imageRef.current;
     if (!image) {
       return;
     }
+
     if (image.complete) {
       updateBounds();
       return;
     }
+
     const frame = window.requestAnimationFrame(updateBounds);
     return () => {
       window.cancelAnimationFrame(frame);
@@ -588,150 +481,9 @@ export default function ImageCropper(
     };
   }, []);
 
-  useEffect(() => {
-    const handlePointerMove = (event: PointerEvent) => {
-      const interaction = interactionRef.current;
-      const currentBounds = bounds;
-      if (!interaction || !currentBounds) {
-        return;
-      }
-      const point = toLocalPoint(event.clientX, event.clientY);
-      if (!point) {
-        return;
-      }
-
-      if (interaction.mode === "draw") {
-        const direction = {
-          dirX: point.x >= interaction.anchor.x ? (1 as const) : (-1 as const),
-          dirY: point.y >= interaction.anchor.y ? (1 as const) : (-1 as const)
-        };
-        setRect(
-          createRectFromAnchor(
-            interaction.anchor,
-            point,
-            direction,
-            currentBounds,
-            aspectRatio
-          )
-        );
-        return;
-      }
-
-      if (interaction.mode === "move") {
-        const dx = point.x - interaction.startPointer.x;
-        const dy = point.y - interaction.startPointer.y;
-        setRect(
-          roundRect({
-            x: clamp(
-              interaction.startRect.x + dx,
-              0,
-              currentBounds.w - interaction.startRect.w
-            ),
-            y: clamp(
-              interaction.startRect.y + dy,
-              0,
-              currentBounds.h - interaction.startRect.h
-            ),
-            w: interaction.startRect.w,
-            h: interaction.startRect.h
-          })
-        );
-        return;
-      }
-
-      setRect(
-        createRectFromAnchor(
-          interaction.anchor,
-          point,
-          { dirX: interaction.dirX, dirY: interaction.dirY },
-          currentBounds,
-          aspectRatio
-        )
-      );
-    };
-
-    const handlePointerUp = () => {
-      interactionRef.current = null;
-    };
-
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-    };
-  }, [aspectRatio, bounds, toLocalPoint]);
-
-  const beginDraw = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      if (!bounds) {
-        return;
-      }
-      const point = toLocalPoint(event.clientX, event.clientY);
-      if (!point) {
-        return;
-      }
-      interactionRef.current = { mode: "draw", anchor: point };
-      setRect(
-        createRectFromAnchor(
-          point,
-          point,
-          { dirX: 1, dirY: 1 },
-          bounds,
-          aspectRatio
-        )
-      );
-      event.preventDefault();
-    },
-    [aspectRatio, bounds, toLocalPoint]
-  );
-
-  const beginMove = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      const point = toLocalPoint(event.clientX, event.clientY);
-      const currentRect = rectRef.current;
-      if (!point || !currentRect) {
-        return;
-      }
-      interactionRef.current = {
-        mode: "move",
-        startPointer: point,
-        startRect: currentRect
-      };
-      event.preventDefault();
-      event.stopPropagation();
-    },
-    [toLocalPoint]
-  );
-
-  const beginResize = useCallback(
-    (handle: CornerHandle, event: React.PointerEvent<HTMLButtonElement>) => {
-      const currentRect = rectRef.current;
-      if (!currentRect) {
-        return;
-      }
-      const direction = HANDLE_DIRECTION[handle];
-
-      const anchor: Point = {
-        x: direction.dirX > 0 ? currentRect.x : currentRect.x + currentRect.w,
-        y: direction.dirY > 0 ? currentRect.y : currentRect.y + currentRect.h
-      };
-
-      interactionRef.current = {
-        mode: "resize",
-        anchor,
-        dirX: direction.dirX,
-        dirY: direction.dirY
-      };
-      event.preventDefault();
-      event.stopPropagation();
-    },
-    []
-  );
-
-  const imageStyle = useMemo(
+  const imageStyle = useMemo<CSSProperties>(
     () => ({
-      ...imageBaseStyle,
+      display: "block",
       width: "100%",
       height: "auto",
       maxWidth: props.cropwidth > 0 ? `${props.cropwidth}px` : "100%",
@@ -740,49 +492,7 @@ export default function ImageCropper(
     [props.cropheight, props.cropwidth]
   );
 
-  const touchHandleSize = isCoarsePointer ? 18 : 10;
-  const touchHandleOffset = isCoarsePointer ? -10 : -6;
-  const dynamicHandleBaseStyle = useMemo(
-    () => ({
-      ...handleBaseStyle,
-      width: `${touchHandleSize}px`,
-      height: `${touchHandleSize}px`
-    }),
-    [touchHandleSize]
-  );
-  const dynamicHandleStyles = useMemo<Record<CornerHandle, CSSProperties>>(
-    () => ({
-      nw: {
-        ...handleStyles.nw,
-        left: `${touchHandleOffset}px`,
-        top: `${touchHandleOffset}px`
-      },
-      ne: {
-        ...handleStyles.ne,
-        right: `${touchHandleOffset}px`,
-        top: `${touchHandleOffset}px`
-      },
-      se: {
-        ...handleStyles.se,
-        right: `${touchHandleOffset}px`,
-        bottom: `${touchHandleOffset}px`
-      },
-      sw: {
-        ...handleStyles.sw,
-        left: `${touchHandleOffset}px`,
-        bottom: `${touchHandleOffset}px`
-      }
-    }),
-    [touchHandleOffset]
-  );
-  const dynamicSelectionStyle = useMemo(
-    () => ({
-      ...selectionBaseStyle,
-      borderWidth: isCoarsePointer ? "2px" : "1px"
-    }),
-    [isCoarsePointer]
-  );
-  const dynamicActionBarStyle = useMemo(
+  const dynamicActionBarStyle = useMemo<CSSProperties>(
     () => ({
       ...actionBarStyle,
       width: "100%",
@@ -790,7 +500,8 @@ export default function ImageCropper(
     }),
     [isCoarsePointer]
   );
-  const dynamicPrimaryButtonStyle = useMemo(
+
+  const dynamicPrimaryButtonStyle = useMemo<CSSProperties>(
     () => ({
       ...primaryButtonStyle,
       minHeight: isCoarsePointer ? "42px" : undefined,
@@ -798,7 +509,8 @@ export default function ImageCropper(
     }),
     [isCoarsePointer]
   );
-  const dynamicButtonStyle = useMemo(
+
+  const dynamicButtonStyle = useMemo<CSSProperties>(
     () => ({
       ...buttonStyle,
       minHeight: isCoarsePointer ? "42px" : undefined,
@@ -807,14 +519,13 @@ export default function ImageCropper(
     [isCoarsePointer]
   );
 
-  const className = "image-cropper";
   const noImage = props.image.status === "available" && !imageUri;
   const canRunApplyAction =
     !!props.onApplyAction?.canExecute &&
-    props.image.status === "available" &&
-    !!rect &&
+    !!crop &&
     !!bounds &&
     !!naturalBounds &&
+    props.image.status === "available" &&
     !!imageUri;
 
   const resetSelection = useCallback(() => {
@@ -822,51 +533,40 @@ export default function ImageCropper(
       return;
     }
 
-    setErrorMessage("");
-    setRect(getDefaultSelectionRect(props, bounds, naturalBounds, aspectRatio));
+    setCrop(getDefaultCrop(props, bounds, naturalBounds, aspectRatio));
   }, [aspectRatio, bounds, naturalBounds, props]);
 
   const applySelection = useCallback(() => {
-    if (!canRunApplyAction || !rect || !bounds || !naturalBounds) {
+    if (!canRunApplyAction) {
       return;
     }
-    setErrorMessage("");
+
     props.onApplyAction?.execute();
-  }, [bounds, canRunApplyAction, naturalBounds, props.onApplyAction, rect]);
+  }, [canRunApplyAction, props.onApplyAction]);
 
   return (
-    <div className={className} tabIndex={props.tabIndex} style={rootStyle}>
+    <div className="image-cropper" tabIndex={props.tabIndex} style={rootStyle}>
       {props.image.status === "loading" ? (
-        <div className="image-cropper__message" style={messageStyle}>
-          Loading image...
-        </div>
+        <div style={messageStyle}>Loading image...</div>
       ) : null}
       {props.image.status === "unavailable" ? (
-        <div className="image-cropper__message" style={messageStyle}>
-          Image is unavailable.
-        </div>
+        <div style={messageStyle}>Image is unavailable.</div>
       ) : null}
-      {noImage ? (
-        <div className="image-cropper__message" style={messageStyle}>
-          No image to display.
-        </div>
-      ) : null}
-      {errorMessage ? (
-        <div
-          className="image-cropper__message"
-          style={{ ...messageStyle, color: "#b42318" }}
-        >
-          {errorMessage}
-        </div>
-      ) : null}
+      {noImage ? <div style={messageStyle}>No image to display.</div> : null}
 
       {imageUri ? (
         <>
-          <div
-            className="image-cropper__canvas"
-            ref={canvasRef}
-            style={canvasStyle}
-            onPointerDown={beginDraw}
+          <ReactCrop
+            crop={crop}
+            aspect={aspectRatio > 0 ? aspectRatio : undefined}
+            minWidth={1}
+            minHeight={1}
+            keepSelection
+            ruleOfThirds
+            onChange={(nextCrop) => {
+              setCrop(normalizeCrop(nextCrop));
+            }}
+            className="image-cropper__react-crop"
           >
             <img
               ref={imageRef}
@@ -878,104 +578,7 @@ export default function ImageCropper(
               onLoad={updateBounds}
               onDragStart={(event) => event.preventDefault()}
             />
-            {rect && bounds ? (
-              <>
-                <div
-                  className="image-cropper__shade"
-                  style={{
-                    ...shadeBaseStyle,
-                    left: 0,
-                    top: 0,
-                    width: "100%",
-                    height: rect.y
-                  }}
-                />
-                <div
-                  className="image-cropper__shade"
-                  style={{
-                    ...shadeBaseStyle,
-                    left: 0,
-                    top: rect.y,
-                    width: rect.x,
-                    height: rect.h
-                  }}
-                />
-                <div
-                  className="image-cropper__shade"
-                  style={{
-                    ...shadeBaseStyle,
-                    left: rect.x + rect.w,
-                    top: rect.y,
-                    width: bounds.w - rect.x - rect.w,
-                    height: rect.h
-                  }}
-                />
-                <div
-                  className="image-cropper__shade"
-                  style={{
-                    ...shadeBaseStyle,
-                    left: 0,
-                    top: rect.y + rect.h,
-                    width: "100%",
-                    height: bounds.h - rect.y - rect.h
-                  }}
-                />
-
-                <div
-                  className="image-cropper__selection"
-                  style={{
-                    ...dynamicSelectionStyle,
-                    left: rect.x,
-                    top: rect.y,
-                    width: rect.w,
-                    height: rect.h
-                  }}
-                  onPointerDown={beginMove}
-                >
-                  <button
-                    type="button"
-                    className="image-cropper__handle image-cropper__handle--nw"
-                    style={{
-                      ...dynamicHandleBaseStyle,
-                      ...dynamicHandleStyles.nw
-                    }}
-                    onPointerDown={(event) => beginResize("nw", event)}
-                    aria-label="Resize north-west"
-                  />
-                  <button
-                    type="button"
-                    className="image-cropper__handle image-cropper__handle--ne"
-                    style={{
-                      ...dynamicHandleBaseStyle,
-                      ...dynamicHandleStyles.ne
-                    }}
-                    onPointerDown={(event) => beginResize("ne", event)}
-                    aria-label="Resize north-east"
-                  />
-                  <button
-                    type="button"
-                    className="image-cropper__handle image-cropper__handle--se"
-                    style={{
-                      ...dynamicHandleBaseStyle,
-                      ...dynamicHandleStyles.se
-                    }}
-                    onPointerDown={(event) => beginResize("se", event)}
-                    aria-label="Resize south-east"
-                  />
-                  <button
-                    type="button"
-                    className="image-cropper__handle image-cropper__handle--sw"
-                    style={{
-                      ...dynamicHandleBaseStyle,
-                      ...dynamicHandleStyles.sw
-                    }}
-                    onPointerDown={(event) => beginResize("sw", event)}
-                    aria-label="Resize south-west"
-                  />
-                </div>
-              </>
-            ) : null}
-          </div>
+          </ReactCrop>
           <div style={dynamicActionBarStyle}>
             {props.onApplyAction ? (
               <button

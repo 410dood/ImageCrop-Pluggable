@@ -2,8 +2,9 @@
 
 ## Unreleased
 
-- Added full README documentation for setup, properties, and release output.
-- Verified package remains frontend-only (no Java actions or userlib jars).
+- Switched the crop UI to `react-image-crop` for more reliable mouse and touch behavior.
+- Added Mendix module companion under `mendix-module/ImageCropper` with Java action template and reusable crop support.
+- Updated README with server-side crop persistence guidance and `On apply` wiring.
 
 ## 1.0.0
 

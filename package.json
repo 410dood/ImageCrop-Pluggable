@@ -23,7 +23,8 @@
         "release": "pluggable-widgets-tools release:web"
     },
     "dependencies": {
-        "big.js": "^6.2.2"
+        "big.js": "^6.2.2",
+        "react-image-crop": "^11.0.10"
     },
     "devDependencies": {
         "@mendix/pluggable-widgets-tools": "^11.6.0"

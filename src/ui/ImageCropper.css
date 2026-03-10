@@ -1,72 +1,52 @@
+@import "react-image-crop/dist/ReactCrop.css";
+
 .image-cropper {
-    display: inline-block;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
     max-width: 100%;
-}
-
-.image-cropper__message {
-    padding: 8px 10px;
-    font-size: 13px;
-    color: #5f6a77;
-}
-
-.image-cropper__canvas {
-    position: relative;
-    display: inline-block;
-    line-height: 0;
-    overflow: hidden;
-    touch-action: none;
-    user-select: none;
 }
 
 .image-cropper__image {
     display: block;
+    max-width: 100%;
+    touch-action: none;
+    user-select: none;
 }
 
-.image-cropper__shade {
-    position: absolute;
-    background: rgba(0, 0, 0, 0.4);
-    pointer-events: none;
-    z-index: 2;
+.image-cropper__react-crop {
+    max-width: 100%;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #0f172a;
 }
 
-.image-cropper__selection {
-    position: absolute;
-    border: 1px solid #ffffff;
-    box-shadow: 0 0 0 10000px rgba(0, 0, 0, 0);
-    z-index: 3;
-    cursor: move;
+.image-cropper__react-crop .ReactCrop__crop-selection {
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.45);
 }
 
-.image-cropper__handle {
-    position: absolute;
-    width: 10px;
-    height: 10px;
-    border: 1px solid #1f2a37;
+.image-cropper__react-crop .ReactCrop__drag-handle::after {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.image-cropper__react-crop .ReactCrop__handle {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #1f2a37;
     background: #ffffff;
-    padding: 0;
-    z-index: 4;
 }
 
-.image-cropper__handle--nw {
-    left: -6px;
-    top: -6px;
-    cursor: nwse-resize;
+.image-cropper__react-crop .ReactCrop__rule-of-thirds-vt::before,
+.image-cropper__react-crop .ReactCrop__rule-of-thirds-vt::after,
+.image-cropper__react-crop .ReactCrop__rule-of-thirds-hz::before,
+.image-cropper__react-crop .ReactCrop__rule-of-thirds-hz::after {
+    background-color: rgba(255, 255, 255, 0.7);
 }
 
-.image-cropper__handle--ne {
-    right: -6px;
-    top: -6px;
-    cursor: nesw-resize;
-}
-
-.image-cropper__handle--se {
-    right: -6px;
-    bottom: -6px;
-    cursor: nwse-resize;
-}
-
-.image-cropper__handle--sw {
-    left: -6px;
-    bottom: -6px;
-    cursor: nesw-resize;
+@media (pointer: coarse) {
+    .image-cropper__react-crop .ReactCrop__handle {
+        width: 22px;
+        height: 22px;
+    }
 }
