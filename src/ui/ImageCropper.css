@@ -1,7 +1,39 @@
 .image-cropper {
     display: flex;
     flex-direction: column;
+    width: 100%;
     max-width: 100%;
+}
+
+.image-cropper--align-left {
+    align-items: flex-start;
+    text-align: left;
+}
+
+.image-cropper--align-center {
+    align-items: center;
+    text-align: center;
+}
+
+.image-cropper--align-right {
+    align-items: flex-end;
+    text-align: right;
+}
+
+.image-cropper__actions {
+    width: 100%;
+}
+
+.image-cropper--align-left .image-cropper__actions {
+    justify-content: flex-start;
+}
+
+.image-cropper--align-center .image-cropper__actions {
+    justify-content: center;
+}
+
+.image-cropper--align-right .image-cropper__actions {
+    justify-content: flex-end;
 }
 
 .image-cropper .ReactCrop {

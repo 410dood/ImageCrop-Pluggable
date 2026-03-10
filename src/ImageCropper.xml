@@ -45,6 +45,15 @@
                 <caption>Max height</caption>
                 <description>Maximum rendered image height in pixels. Use 0 for no maximum.</description>
             </property>
+            <property key="contentAlignment" type="enumeration" defaultValue="left" required="true">
+                <caption>Content alignment</caption>
+                <description>Horizontal alignment of the cropper content inside the widget.</description>
+                <enumerationValues>
+                    <enumerationValue key="left">Left</enumerationValue>
+                    <enumerationValue key="center">Center</enumerationValue>
+                    <enumerationValue key="right">Right</enumerationValue>
+                </enumerationValues>
+            </property>
         </propertyGroup>
 
         <propertyGroup caption="Output attributes">

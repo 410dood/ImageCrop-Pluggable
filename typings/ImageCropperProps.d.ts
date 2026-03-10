@@ -6,6 +6,8 @@
 import { ActionValue, DynamicValue, EditableValue, WebImage } from "mendix";
 import { Big } from "big.js";
 
+export type ContentAlignmentEnum = "left" | "center" | "right";
+
 export interface ImageCropperContainerProps {
     name: string;
     tabIndex?: number;
@@ -16,6 +18,7 @@ export interface ImageCropperContainerProps {
     startheight: number;
     cropwidth: number;
     cropheight: number;
+    contentAlignment: ContentAlignmentEnum;
     crop_x1: EditableValue<Big>;
     crop_y1: EditableValue<Big>;
     crop_x2: EditableValue<Big>;
@@ -35,6 +38,7 @@ export interface ImageCropperPreviewProps {
     startheight: number | null;
     cropwidth: number | null;
     cropheight: number | null;
+    contentAlignment: ContentAlignmentEnum;
     crop_x1: string;
     crop_y1: string;
     crop_x2: string;

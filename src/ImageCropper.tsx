@@ -478,7 +478,6 @@ export default function ImageCropper(
   const dynamicActionBarStyle = useMemo<CSSProperties>(
     () => ({
       ...actionBarStyle,
-      width: "100%",
       gap: isCoarsePointer ? "10px" : actionBarStyle.gap
     }),
     [isCoarsePointer]
@@ -510,8 +509,13 @@ export default function ImageCropper(
     props.onApplyAction?.execute();
   }, [canRunApplyAction, props.onApplyAction]);
 
+  const rootClassName = useMemo(
+    () => `image-cropper image-cropper--align-${props.contentAlignment}`,
+    [props.contentAlignment]
+  );
+
   return (
-    <div className="image-cropper" tabIndex={props.tabIndex}>
+    <div className={rootClassName} tabIndex={props.tabIndex}>
       {props.image.status === "loading" ? (
         <div style={messageStyle}>Loading image...</div>
       ) : null}
@@ -545,7 +549,7 @@ export default function ImageCropper(
               onDragStart={(event) => event.preventDefault()}
             />
           </ReactCrop>
-          <div style={dynamicActionBarStyle}>
+          <div className="image-cropper__actions" style={dynamicActionBarStyle}>
             {props.onApplyAction ? (
               <button
                 type="button"
