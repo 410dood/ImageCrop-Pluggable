@@ -29,6 +29,15 @@ interface Bounds {
   h: number;
 }
 
+interface SourceRect {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  w: number;
+  h: number;
+}
+
 type Interaction =
   | {
       mode: "draw";
@@ -106,6 +115,103 @@ function getImageUri(image: WebImage | undefined): string | undefined {
   return image.uri;
 }
 
+function readBig(value: Big | undefined): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const numberValue = Number(value.toString());
+  return Number.isFinite(numberValue) ? numberValue : undefined;
+}
+
+function rectToSourceRect(
+  rect: Rect,
+  displayBounds: Bounds,
+  naturalBounds: Bounds
+): SourceRect {
+  const scaleX = naturalBounds.w / displayBounds.w;
+  const scaleY = naturalBounds.h / displayBounds.h;
+
+  const x1 = Math.round(rect.x * scaleX);
+  const y1 = Math.round(rect.y * scaleY);
+  const x2 = Math.round((rect.x + rect.w) * scaleX);
+  const y2 = Math.round((rect.y + rect.h) * scaleY);
+
+  return {
+    x1,
+    y1,
+    x2,
+    y2,
+    w: Math.max(1, x2 - x1),
+    h: Math.max(1, y2 - y1)
+  };
+}
+
+function sourceRectToDisplayRect(
+  sourceRect: SourceRect,
+  displayBounds: Bounds,
+  naturalBounds: Bounds
+): Rect {
+  const scaleX = displayBounds.w / naturalBounds.w;
+  const scaleY = displayBounds.h / naturalBounds.h;
+
+  const x = sourceRect.x1 * scaleX;
+  const y = sourceRect.y1 * scaleY;
+  const w = Math.max(1, sourceRect.w * scaleX);
+  const h = Math.max(1, sourceRect.h * scaleY);
+
+  return roundRect({
+    x: clamp(x, 0, displayBounds.w - w),
+    y: clamp(y, 0, displayBounds.h - h),
+    w: Math.min(w, displayBounds.w),
+    h: Math.min(h, displayBounds.h)
+  });
+}
+
+function readSourceRectFromAttributes(
+  props: ImageCropperContainerProps,
+  naturalBounds: Bounds
+): SourceRect | null {
+  const x1 = readBig(props.crop_x1.value);
+  const y1 = readBig(props.crop_y1.value);
+  const x2 = readBig(props.crop_x2.value);
+  const y2 = readBig(props.crop_y2.value);
+  const width = readBig(props.crop_width.value);
+  const height = readBig(props.crop_height.value);
+
+  const resolvedX1 = x1 ?? 0;
+  const resolvedY1 = y1 ?? 0;
+  const resolvedW =
+    width ?? (x2 !== undefined && x1 !== undefined ? x2 - x1 : undefined);
+  const resolvedH =
+    height ?? (y2 !== undefined && y1 !== undefined ? y2 - y1 : undefined);
+  const resolvedX2 =
+    x2 ?? (resolvedW !== undefined ? resolvedX1 + resolvedW : undefined);
+  const resolvedY2 =
+    y2 ?? (resolvedH !== undefined ? resolvedY1 + resolvedH : undefined);
+
+  if (
+    resolvedW === undefined ||
+    resolvedH === undefined ||
+    resolvedX2 === undefined ||
+    resolvedY2 === undefined
+  ) {
+    return null;
+  }
+
+  if (resolvedW <= 0 || resolvedH <= 0) {
+    return null;
+  }
+
+  return {
+    x1: clamp(resolvedX1, 0, naturalBounds.w),
+    y1: clamp(resolvedY1, 0, naturalBounds.h),
+    x2: clamp(resolvedX2, 0, naturalBounds.w),
+    y2: clamp(resolvedY2, 0, naturalBounds.h),
+    w: clamp(resolvedW, 1, naturalBounds.w),
+    h: clamp(resolvedH, 1, naturalBounds.h)
+  };
+}
+
 function createRectFromAnchor(
   anchor: Point,
   pointer: Point,
@@ -180,8 +286,10 @@ export default function ImageCropper(
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const interactionRef = useRef<Interaction | null>(null);
   const rectRef = useRef<Rect | null>(null);
+  const initializedForKeyRef = useRef<string>("");
 
   const [bounds, setBounds] = useState<Bounds | null>(null);
+  const [naturalBounds, setNaturalBounds] = useState<Bounds | null>(null);
   const [rect, setRect] = useState<Rect | null>(null);
 
   const aspectRatio = useMemo(
@@ -198,10 +306,21 @@ export default function ImageCropper(
     if (!image) {
       return;
     }
+    const nextNatural = {
+      w: image.naturalWidth || image.clientWidth,
+      h: image.naturalHeight || image.clientHeight
+    };
     const next = { w: image.clientWidth, h: image.clientHeight };
     if (next.w > 0 && next.h > 0) {
       setBounds((current) =>
         current && current.w === next.w && current.h === next.h ? current : next
+      );
+    }
+    if (nextNatural.w > 0 && nextNatural.h > 0) {
+      setNaturalBounds((current) =>
+        current && current.w === nextNatural.w && current.h === nextNatural.h
+          ? current
+          : nextNatural
       );
     }
   }, []);
@@ -227,10 +346,32 @@ export default function ImageCropper(
   }, [rect]);
 
   useEffect(() => {
-    if (!bounds) {
+    if (!imageUri) {
+      initializedForKeyRef.current = "";
+      setRect(null);
+      setBounds(null);
+      setNaturalBounds(null);
+      return;
+    }
+  }, [imageUri]);
+
+  useEffect(() => {
+    if (!bounds || !naturalBounds || !imageUri) {
       setRect(null);
       return;
     }
+    const initializationKey = `${imageUri}:${bounds.w}x${bounds.h}:${naturalBounds.w}x${naturalBounds.h}`;
+    if (initializedForKeyRef.current === initializationKey) {
+      return;
+    }
+    initializedForKeyRef.current = initializationKey;
+
+    const sourceRect = readSourceRectFromAttributes(props, naturalBounds);
+    if (sourceRect) {
+      setRect(sourceRectToDisplayRect(sourceRect, bounds, naturalBounds));
+      return;
+    }
+
     setRect(
       createInitialRect(
         bounds,
@@ -239,19 +380,30 @@ export default function ImageCropper(
         aspectRatio
       )
     );
-  }, [bounds, props.startwidth, props.startheight, aspectRatio, imageUri]);
+  }, [
+    aspectRatio,
+    bounds,
+    imageUri,
+    naturalBounds,
+    props,
+    props.startheight,
+    props.startwidth
+  ]);
 
   useEffect(() => {
-    if (!rect) {
+    if (!rect || !bounds || !naturalBounds) {
       return;
     }
-    setInteger(props.crop_x1, rect.x);
-    setInteger(props.crop_y1, rect.y);
-    setInteger(props.crop_x2, rect.x + rect.w);
-    setInteger(props.crop_y2, rect.y + rect.h);
-    setInteger(props.crop_width, rect.w);
-    setInteger(props.crop_height, rect.h);
+    const sourceRect = rectToSourceRect(rect, bounds, naturalBounds);
+    setInteger(props.crop_x1, sourceRect.x1);
+    setInteger(props.crop_y1, sourceRect.y1);
+    setInteger(props.crop_x2, sourceRect.x2);
+    setInteger(props.crop_y2, sourceRect.y2);
+    setInteger(props.crop_width, sourceRect.w);
+    setInteger(props.crop_height, sourceRect.h);
   }, [
+    bounds,
+    naturalBounds,
     props.crop_x1,
     props.crop_y1,
     props.crop_x2,
@@ -451,7 +603,9 @@ export default function ImageCropper(
             src={imageUri}
             className="image-cropper__image"
             style={imageStyle}
+            draggable={false}
             onLoad={updateBounds}
+            onDragStart={(event) => event.preventDefault()}
           />
           {rect && bounds ? (
             <>
