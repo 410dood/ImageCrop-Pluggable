@@ -394,44 +394,6 @@ function getDefaultSelectionRect(
   );
 }
 
-function inferMimeType(fileName?: string): string {
-  const normalized = (fileName || "").toLowerCase();
-
-  if (normalized.endsWith(".png")) {
-    return "image/png";
-  }
-  if (normalized.endsWith(".webp")) {
-    return "image/webp";
-  }
-  if (normalized.endsWith(".gif")) {
-    return "image/gif";
-  }
-
-  return "image/jpeg";
-}
-
-function withCroppedSuffix(
-  fileName: string | undefined,
-  mimeType: string
-): string {
-  const extension =
-    mimeType === "image/png"
-      ? ".png"
-      : mimeType === "image/webp"
-      ? ".webp"
-      : mimeType === "image/gif"
-      ? ".gif"
-      : ".jpg";
-
-  if (!fileName) {
-    return `cropped${extension}`;
-  }
-
-  const dotIndex = fileName.lastIndexOf(".");
-  const baseName = dotIndex > 0 ? fileName.slice(0, dotIndex) : fileName;
-  return `${baseName}-cropped${extension}`;
-}
-
 function isCoarsePointerDevice(): boolean {
   if (
     typeof window === "undefined" ||
@@ -456,7 +418,6 @@ export default function ImageCropper(
   const [naturalBounds, setNaturalBounds] = useState<Bounds | null>(null);
   const [rect, setRect] = useState<Rect | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const [isApplying, setIsApplying] = useState(false);
   const [isCoarsePointer, setIsCoarsePointer] = useState(isCoarsePointerDevice);
 
   const aspectRatio = useMemo(
@@ -848,10 +809,8 @@ export default function ImageCropper(
 
   const className = "image-cropper";
   const noImage = props.image.status === "available" && !imageUri;
-  const isReadOnly = props.image.readOnly;
-  const canApply =
-    !isApplying &&
-    !isReadOnly &&
+  const canRunApplyAction =
+    !!props.onApplyAction?.canExecute &&
     props.image.status === "available" &&
     !!rect &&
     !!bounds &&
@@ -867,69 +826,13 @@ export default function ImageCropper(
     setRect(getDefaultSelectionRect(props, bounds, naturalBounds, aspectRatio));
   }, [aspectRatio, bounds, naturalBounds, props]);
 
-  const applyCrop = useCallback(async () => {
-    if (!canApply || !rect || !bounds || !naturalBounds) {
+  const applySelection = useCallback(() => {
+    if (!canRunApplyAction || !rect || !bounds || !naturalBounds) {
       return;
     }
-
-    const image = imageRef.current;
-    if (!image) {
-      setErrorMessage("The image element is not available.");
-      return;
-    }
-
-    const crop = rectToSourceRect(rect, bounds, naturalBounds);
-    const canvas = document.createElement("canvas");
-    canvas.width = crop.w;
-    canvas.height = crop.h;
-
-    const context = canvas.getContext("2d");
-    if (!context) {
-      setErrorMessage("Canvas is not available in this browser.");
-      return;
-    }
-
-    setIsApplying(true);
     setErrorMessage("");
-
-    try {
-      context.drawImage(
-        image,
-        crop.x1,
-        crop.y1,
-        crop.w,
-        crop.h,
-        0,
-        0,
-        crop.w,
-        crop.h
-      );
-
-      const mimeType = inferMimeType(props.image.value?.name);
-      const blob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob(
-          resolve,
-          mimeType,
-          mimeType === "image/jpeg" ? 0.92 : undefined
-        );
-      });
-
-      if (!blob) {
-        throw new Error("Failed to create the cropped image.");
-      }
-
-      const fileName = withCroppedSuffix(props.image.value?.name, mimeType);
-      props.image.setValue(new File([blob], fileName, { type: mimeType }));
-
-      if (props.onApplyAction?.canExecute) {
-        props.onApplyAction.execute();
-      }
-    } catch (error) {
-      setErrorMessage((error as Error).message || "Failed to apply crop.");
-    } finally {
-      setIsApplying(false);
-    }
-  }, [bounds, canApply, naturalBounds, props.image, props.onApplyAction, rect]);
+    props.onApplyAction?.execute();
+  }, [bounds, canRunApplyAction, naturalBounds, props.onApplyAction, rect]);
 
   return (
     <div className={className} tabIndex={props.tabIndex} style={rootStyle}>
@@ -946,11 +849,6 @@ export default function ImageCropper(
       {noImage ? (
         <div className="image-cropper__message" style={messageStyle}>
           No image to display.
-        </div>
-      ) : null}
-      {isReadOnly && imageUri ? (
-        <div className="image-cropper__message" style={messageStyle}>
-          Image is read-only. Apply is disabled.
         </div>
       ) : null}
       {errorMessage ? (
@@ -1079,34 +977,34 @@ export default function ImageCropper(
             ) : null}
           </div>
           <div style={dynamicActionBarStyle}>
+            {props.onApplyAction ? (
+              <button
+                type="button"
+                style={
+                  canRunApplyAction
+                    ? dynamicPrimaryButtonStyle
+                    : { ...dynamicPrimaryButtonStyle, ...disabledButtonStyle }
+                }
+                onClick={applySelection}
+                disabled={!canRunApplyAction}
+              >
+                Apply selection
+              </button>
+            ) : null}
             <button
               type="button"
               style={
-                canApply
-                  ? dynamicPrimaryButtonStyle
-                  : { ...dynamicPrimaryButtonStyle, ...disabledButtonStyle }
-              }
-              onClick={() => {
-                void applyCrop();
-              }}
-              disabled={!canApply}
-            >
-              {isApplying ? "Applying..." : "Apply crop"}
-            </button>
-            <button
-              type="button"
-              style={
-                bounds && naturalBounds && !isApplying
+                bounds && naturalBounds
                   ? dynamicButtonStyle
                   : { ...dynamicButtonStyle, ...disabledButtonStyle }
               }
               onClick={resetSelection}
-              disabled={!bounds || !naturalBounds || isApplying}
+              disabled={!bounds || !naturalBounds}
             >
               Reset selection
             </button>
             <span style={hintStyle}>
-              Applying the crop overwrites the current image.
+              Crop coordinates update automatically as the selection changes.
             </span>
           </div>
         </>

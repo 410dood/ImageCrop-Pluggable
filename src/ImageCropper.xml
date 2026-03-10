@@ -11,9 +11,9 @@
     <helpUrl>https://marketplace.mendix.com/link/component/254</helpUrl>
     <properties>
         <propertyGroup caption="Data">
-            <property key="image" type="image" allowUpload="true" required="true">
+            <property key="image" type="image" required="true">
                 <caption>Image</caption>
-                <description>Editable image value to display and crop. Applying the crop overwrites this image.</description>
+                <description>Image value to display for crop selection.</description>
             </property>
             <property key="aspectRatio" type="attribute" required="false">
                 <caption>Aspect Ratio</caption>
@@ -101,7 +101,7 @@
         <propertyGroup caption="Actions">
             <property key="onApplyAction" type="action" required="false">
                 <caption>On apply</caption>
-                <description>Runs after the cropped image has been written back to the Mendix image value.</description>
+                <description>Optional action to run after the crop selection has been updated.</description>
             </property>
         </propertyGroup>
 

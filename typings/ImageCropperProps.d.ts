@@ -3,14 +3,14 @@
  * WARNING: All changes made to this file will be overwritten
  * @author Mendix Widgets Framework Team
  */
-import { ActionValue, EditableValue, EditableImageValue, WebImage } from "mendix";
+import { ActionValue, DynamicValue, EditableValue, WebImage } from "mendix";
 import { Big } from "big.js";
 
 export interface ImageCropperContainerProps {
     name: string;
     tabIndex?: number;
     id: string;
-    image: EditableImageValue<WebImage>;
+    image: DynamicValue<WebImage>;
     aspectRatio?: EditableValue<string>;
     startwidth: number;
     startheight: number;
