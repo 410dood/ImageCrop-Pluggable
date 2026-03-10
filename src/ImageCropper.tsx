@@ -1,8 +1,10 @@
 import { Big } from "big.js";
 import {
+  CSSProperties,
   ReactElement,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState
@@ -60,6 +62,57 @@ const HANDLE_DIRECTION: Record<CornerHandle, { dirX: -1 | 1; dirY: -1 | 1 }> = {
   ne: { dirX: 1, dirY: -1 },
   se: { dirX: 1, dirY: 1 },
   sw: { dirX: -1, dirY: 1 }
+};
+
+const messageStyle: CSSProperties = {
+  padding: "8px 10px",
+  fontSize: "13px",
+  color: "#5f6a77"
+};
+
+const canvasStyle: CSSProperties = {
+  position: "relative",
+  display: "inline-block",
+  lineHeight: 0,
+  overflow: "hidden",
+  touchAction: "none",
+  userSelect: "none"
+};
+
+const imageBaseStyle: CSSProperties = {
+  display: "block"
+};
+
+const shadeBaseStyle: CSSProperties = {
+  position: "absolute",
+  background: "rgba(0, 0, 0, 0.4)",
+  pointerEvents: "none",
+  zIndex: 2
+};
+
+const selectionBaseStyle: CSSProperties = {
+  position: "absolute",
+  border: "1px solid #ffffff",
+  boxSizing: "border-box",
+  zIndex: 3,
+  cursor: "move"
+};
+
+const handleBaseStyle: CSSProperties = {
+  position: "absolute",
+  width: "10px",
+  height: "10px",
+  border: "1px solid #1f2a37",
+  background: "#ffffff",
+  padding: 0,
+  zIndex: 4
+};
+
+const handleStyles: Record<CornerHandle, CSSProperties> = {
+  nw: { left: "-6px", top: "-6px", cursor: "nwse-resize" },
+  ne: { right: "-6px", top: "-6px", cursor: "nesw-resize" },
+  se: { right: "-6px", bottom: "-6px", cursor: "nwse-resize" },
+  sw: { left: "-6px", bottom: "-6px", cursor: "nesw-resize" }
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -427,6 +480,24 @@ export default function ImageCropper(
     };
   }, [imageUri, updateBounds]);
 
+  useLayoutEffect(() => {
+    if (!imageUri) {
+      return;
+    }
+    const image = imageRef.current;
+    if (!image) {
+      return;
+    }
+    if (image.complete) {
+      updateBounds();
+      return;
+    }
+    const frame = window.requestAnimationFrame(updateBounds);
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [imageUri, updateBounds]);
+
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
       const interaction = interactionRef.current;
@@ -570,6 +641,7 @@ export default function ImageCropper(
 
   const imageStyle = useMemo(
     () => ({
+      ...imageBaseStyle,
       maxWidth: props.cropwidth > 0 ? `${props.cropwidth}px` : "none",
       maxHeight: props.cropheight > 0 ? `${props.cropheight}px` : "none"
     }),
@@ -582,19 +654,26 @@ export default function ImageCropper(
   return (
     <div className={className} tabIndex={props.tabIndex}>
       {props.image.status === "loading" ? (
-        <div className="image-cropper__message">Loading image...</div>
+        <div className="image-cropper__message" style={messageStyle}>
+          Loading image...
+        </div>
       ) : null}
       {props.image.status === "unavailable" ? (
-        <div className="image-cropper__message">Image is unavailable.</div>
+        <div className="image-cropper__message" style={messageStyle}>
+          Image is unavailable.
+        </div>
       ) : null}
       {noImage ? (
-        <div className="image-cropper__message">No image to display.</div>
+        <div className="image-cropper__message" style={messageStyle}>
+          No image to display.
+        </div>
       ) : null}
 
       {imageUri ? (
         <div
           className="image-cropper__canvas"
           ref={canvasRef}
+          style={canvasStyle}
           onPointerDown={beginDraw}
         >
           <img
@@ -611,15 +690,28 @@ export default function ImageCropper(
             <>
               <div
                 className="image-cropper__shade"
-                style={{ left: 0, top: 0, width: "100%", height: rect.y }}
-              />
-              <div
-                className="image-cropper__shade"
-                style={{ left: 0, top: rect.y, width: rect.x, height: rect.h }}
+                style={{
+                  ...shadeBaseStyle,
+                  left: 0,
+                  top: 0,
+                  width: "100%",
+                  height: rect.y
+                }}
               />
               <div
                 className="image-cropper__shade"
                 style={{
+                  ...shadeBaseStyle,
+                  left: 0,
+                  top: rect.y,
+                  width: rect.x,
+                  height: rect.h
+                }}
+              />
+              <div
+                className="image-cropper__shade"
+                style={{
+                  ...shadeBaseStyle,
                   left: rect.x + rect.w,
                   top: rect.y,
                   width: bounds.w - rect.x - rect.w,
@@ -629,6 +721,7 @@ export default function ImageCropper(
               <div
                 className="image-cropper__shade"
                 style={{
+                  ...shadeBaseStyle,
                   left: 0,
                   top: rect.y + rect.h,
                   width: "100%",
@@ -639,6 +732,7 @@ export default function ImageCropper(
               <div
                 className="image-cropper__selection"
                 style={{
+                  ...selectionBaseStyle,
                   left: rect.x,
                   top: rect.y,
                   width: rect.w,
@@ -649,24 +743,28 @@ export default function ImageCropper(
                 <button
                   type="button"
                   className="image-cropper__handle image-cropper__handle--nw"
+                  style={{ ...handleBaseStyle, ...handleStyles.nw }}
                   onPointerDown={(event) => beginResize("nw", event)}
                   aria-label="Resize north-west"
                 />
                 <button
                   type="button"
                   className="image-cropper__handle image-cropper__handle--ne"
+                  style={{ ...handleBaseStyle, ...handleStyles.ne }}
                   onPointerDown={(event) => beginResize("ne", event)}
                   aria-label="Resize north-east"
                 />
                 <button
                   type="button"
                   className="image-cropper__handle image-cropper__handle--se"
+                  style={{ ...handleBaseStyle, ...handleStyles.se }}
                   onPointerDown={(event) => beginResize("se", event)}
                   aria-label="Resize south-east"
                 />
                 <button
                   type="button"
                   className="image-cropper__handle image-cropper__handle--sw"
+                  style={{ ...handleBaseStyle, ...handleStyles.sw }}
                   onPointerDown={(event) => beginResize("sw", event)}
                   aria-label="Resize south-west"
                 />
