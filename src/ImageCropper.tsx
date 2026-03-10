@@ -98,6 +98,49 @@ const selectionBaseStyle: CSSProperties = {
   cursor: "move"
 };
 
+const actionBarStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+  marginTop: "10px",
+  flexWrap: "wrap"
+};
+
+const buttonStyle: CSSProperties = {
+  appearance: "none",
+  border: "1px solid #1f2a37",
+  borderRadius: "4px",
+  background: "#ffffff",
+  color: "#1f2a37",
+  padding: "6px 10px",
+  fontSize: "13px",
+  lineHeight: 1.2,
+  cursor: "pointer"
+};
+
+const primaryButtonStyle: CSSProperties = {
+  ...buttonStyle,
+  background: "#1f2a37",
+  color: "#ffffff"
+};
+
+const disabledButtonStyle: CSSProperties = {
+  opacity: 0.55,
+  cursor: "not-allowed"
+};
+
+const hintStyle: CSSProperties = {
+  fontSize: "12px",
+  color: "#5f6a77"
+};
+
+const rootStyle: CSSProperties = {
+  display: "inline-flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  maxWidth: "100%"
+};
+
 const handleBaseStyle: CSSProperties = {
   position: "absolute",
   width: "10px",
@@ -332,6 +375,74 @@ function createInitialRect(
   return roundRect({ x: 0, y: 0, w, h });
 }
 
+function getDefaultSelectionRect(
+  props: ImageCropperContainerProps,
+  displayBounds: Bounds,
+  naturalBounds: Bounds,
+  aspectRatio: number
+): Rect {
+  const sourceRect = readSourceRectFromAttributes(props, naturalBounds);
+  if (sourceRect) {
+    return sourceRectToDisplayRect(sourceRect, displayBounds, naturalBounds);
+  }
+
+  return createInitialRect(
+    displayBounds,
+    props.startwidth,
+    props.startheight,
+    aspectRatio
+  );
+}
+
+function inferMimeType(fileName?: string): string {
+  const normalized = (fileName || "").toLowerCase();
+
+  if (normalized.endsWith(".png")) {
+    return "image/png";
+  }
+  if (normalized.endsWith(".webp")) {
+    return "image/webp";
+  }
+  if (normalized.endsWith(".gif")) {
+    return "image/gif";
+  }
+
+  return "image/jpeg";
+}
+
+function withCroppedSuffix(
+  fileName: string | undefined,
+  mimeType: string
+): string {
+  const extension =
+    mimeType === "image/png"
+      ? ".png"
+      : mimeType === "image/webp"
+      ? ".webp"
+      : mimeType === "image/gif"
+      ? ".gif"
+      : ".jpg";
+
+  if (!fileName) {
+    return `cropped${extension}`;
+  }
+
+  const dotIndex = fileName.lastIndexOf(".");
+  const baseName = dotIndex > 0 ? fileName.slice(0, dotIndex) : fileName;
+  return `${baseName}-cropped${extension}`;
+}
+
+function isCoarsePointerDevice(): boolean {
+  if (
+    typeof window === "undefined" ||
+    typeof window.matchMedia !== "function"
+  ) {
+    return false;
+  }
+
+  return window.matchMedia("(pointer: coarse)").matches;
+}
+
 export default function ImageCropper(
   props: ImageCropperContainerProps
 ): ReactElement {
@@ -344,6 +455,9 @@ export default function ImageCropper(
   const [bounds, setBounds] = useState<Bounds | null>(null);
   const [naturalBounds, setNaturalBounds] = useState<Bounds | null>(null);
   const [rect, setRect] = useState<Rect | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isApplying, setIsApplying] = useState(false);
+  const [isCoarsePointer, setIsCoarsePointer] = useState(isCoarsePointerDevice);
 
   const aspectRatio = useMemo(
     () => parseAspectRatio(props.aspectRatio?.value),
@@ -419,20 +533,7 @@ export default function ImageCropper(
     }
     initializedForKeyRef.current = initializationKey;
 
-    const sourceRect = readSourceRectFromAttributes(props, naturalBounds);
-    if (sourceRect) {
-      setRect(sourceRectToDisplayRect(sourceRect, bounds, naturalBounds));
-      return;
-    }
-
-    setRect(
-      createInitialRect(
-        bounds,
-        props.startwidth,
-        props.startheight,
-        aspectRatio
-      )
-    );
+    setRect(getDefaultSelectionRect(props, bounds, naturalBounds, aspectRatio));
   }, [
     aspectRatio,
     bounds,
@@ -497,6 +598,34 @@ export default function ImageCropper(
       window.cancelAnimationFrame(frame);
     };
   }, [imageUri, updateBounds]);
+
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(pointer: coarse)");
+    const updatePointerMode = () => {
+      setIsCoarsePointer(mediaQuery.matches);
+    };
+
+    updatePointerMode();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updatePointerMode);
+      return () => {
+        mediaQuery.removeEventListener("change", updatePointerMode);
+      };
+    }
+
+    mediaQuery.addListener(updatePointerMode);
+    return () => {
+      mediaQuery.removeListener(updatePointerMode);
+    };
+  }, []);
 
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
@@ -642,17 +771,168 @@ export default function ImageCropper(
   const imageStyle = useMemo(
     () => ({
       ...imageBaseStyle,
-      maxWidth: props.cropwidth > 0 ? `${props.cropwidth}px` : "none",
+      width: "100%",
+      height: "auto",
+      maxWidth: props.cropwidth > 0 ? `${props.cropwidth}px` : "100%",
       maxHeight: props.cropheight > 0 ? `${props.cropheight}px` : "none"
     }),
     [props.cropheight, props.cropwidth]
   );
 
+  const touchHandleSize = isCoarsePointer ? 18 : 10;
+  const touchHandleOffset = isCoarsePointer ? -10 : -6;
+  const dynamicHandleBaseStyle = useMemo(
+    () => ({
+      ...handleBaseStyle,
+      width: `${touchHandleSize}px`,
+      height: `${touchHandleSize}px`
+    }),
+    [touchHandleSize]
+  );
+  const dynamicHandleStyles = useMemo<Record<CornerHandle, CSSProperties>>(
+    () => ({
+      nw: {
+        ...handleStyles.nw,
+        left: `${touchHandleOffset}px`,
+        top: `${touchHandleOffset}px`
+      },
+      ne: {
+        ...handleStyles.ne,
+        right: `${touchHandleOffset}px`,
+        top: `${touchHandleOffset}px`
+      },
+      se: {
+        ...handleStyles.se,
+        right: `${touchHandleOffset}px`,
+        bottom: `${touchHandleOffset}px`
+      },
+      sw: {
+        ...handleStyles.sw,
+        left: `${touchHandleOffset}px`,
+        bottom: `${touchHandleOffset}px`
+      }
+    }),
+    [touchHandleOffset]
+  );
+  const dynamicSelectionStyle = useMemo(
+    () => ({
+      ...selectionBaseStyle,
+      borderWidth: isCoarsePointer ? "2px" : "1px"
+    }),
+    [isCoarsePointer]
+  );
+  const dynamicActionBarStyle = useMemo(
+    () => ({
+      ...actionBarStyle,
+      width: "100%",
+      gap: isCoarsePointer ? "10px" : actionBarStyle.gap
+    }),
+    [isCoarsePointer]
+  );
+  const dynamicPrimaryButtonStyle = useMemo(
+    () => ({
+      ...primaryButtonStyle,
+      minHeight: isCoarsePointer ? "42px" : undefined,
+      padding: isCoarsePointer ? "10px 14px" : primaryButtonStyle.padding
+    }),
+    [isCoarsePointer]
+  );
+  const dynamicButtonStyle = useMemo(
+    () => ({
+      ...buttonStyle,
+      minHeight: isCoarsePointer ? "42px" : undefined,
+      padding: isCoarsePointer ? "10px 14px" : buttonStyle.padding
+    }),
+    [isCoarsePointer]
+  );
+
   const className = "image-cropper";
   const noImage = props.image.status === "available" && !imageUri;
+  const isReadOnly = props.image.readOnly;
+  const canApply =
+    !isApplying &&
+    !isReadOnly &&
+    props.image.status === "available" &&
+    !!rect &&
+    !!bounds &&
+    !!naturalBounds &&
+    !!imageUri;
+
+  const resetSelection = useCallback(() => {
+    if (!bounds || !naturalBounds) {
+      return;
+    }
+
+    setErrorMessage("");
+    setRect(getDefaultSelectionRect(props, bounds, naturalBounds, aspectRatio));
+  }, [aspectRatio, bounds, naturalBounds, props]);
+
+  const applyCrop = useCallback(async () => {
+    if (!canApply || !rect || !bounds || !naturalBounds) {
+      return;
+    }
+
+    const image = imageRef.current;
+    if (!image) {
+      setErrorMessage("The image element is not available.");
+      return;
+    }
+
+    const crop = rectToSourceRect(rect, bounds, naturalBounds);
+    const canvas = document.createElement("canvas");
+    canvas.width = crop.w;
+    canvas.height = crop.h;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      setErrorMessage("Canvas is not available in this browser.");
+      return;
+    }
+
+    setIsApplying(true);
+    setErrorMessage("");
+
+    try {
+      context.drawImage(
+        image,
+        crop.x1,
+        crop.y1,
+        crop.w,
+        crop.h,
+        0,
+        0,
+        crop.w,
+        crop.h
+      );
+
+      const mimeType = inferMimeType(props.image.value?.name);
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(
+          resolve,
+          mimeType,
+          mimeType === "image/jpeg" ? 0.92 : undefined
+        );
+      });
+
+      if (!blob) {
+        throw new Error("Failed to create the cropped image.");
+      }
+
+      const fileName = withCroppedSuffix(props.image.value?.name, mimeType);
+      props.image.setValue(new File([blob], fileName, { type: mimeType }));
+
+      if (props.onApplyAction?.canExecute) {
+        props.onApplyAction.execute();
+      }
+    } catch (error) {
+      setErrorMessage((error as Error).message || "Failed to apply crop.");
+    } finally {
+      setIsApplying(false);
+    }
+  }, [bounds, canApply, naturalBounds, props.image, props.onApplyAction, rect]);
 
   return (
-    <div className={className} tabIndex={props.tabIndex}>
+    <div className={className} tabIndex={props.tabIndex} style={rootStyle}>
       {props.image.status === "loading" ? (
         <div className="image-cropper__message" style={messageStyle}>
           Loading image...
@@ -668,110 +948,168 @@ export default function ImageCropper(
           No image to display.
         </div>
       ) : null}
+      {isReadOnly && imageUri ? (
+        <div className="image-cropper__message" style={messageStyle}>
+          Image is read-only. Apply is disabled.
+        </div>
+      ) : null}
+      {errorMessage ? (
+        <div
+          className="image-cropper__message"
+          style={{ ...messageStyle, color: "#b42318" }}
+        >
+          {errorMessage}
+        </div>
+      ) : null}
 
       {imageUri ? (
-        <div
-          className="image-cropper__canvas"
-          ref={canvasRef}
-          style={canvasStyle}
-          onPointerDown={beginDraw}
-        >
-          <img
-            ref={imageRef}
-            alt={props.image.value?.altText || "Image crop source"}
-            src={imageUri}
-            className="image-cropper__image"
-            style={imageStyle}
-            draggable={false}
-            onLoad={updateBounds}
-            onDragStart={(event) => event.preventDefault()}
-          />
-          {rect && bounds ? (
-            <>
-              <div
-                className="image-cropper__shade"
-                style={{
-                  ...shadeBaseStyle,
-                  left: 0,
-                  top: 0,
-                  width: "100%",
-                  height: rect.y
-                }}
-              />
-              <div
-                className="image-cropper__shade"
-                style={{
-                  ...shadeBaseStyle,
-                  left: 0,
-                  top: rect.y,
-                  width: rect.x,
-                  height: rect.h
-                }}
-              />
-              <div
-                className="image-cropper__shade"
-                style={{
-                  ...shadeBaseStyle,
-                  left: rect.x + rect.w,
-                  top: rect.y,
-                  width: bounds.w - rect.x - rect.w,
-                  height: rect.h
-                }}
-              />
-              <div
-                className="image-cropper__shade"
-                style={{
-                  ...shadeBaseStyle,
-                  left: 0,
-                  top: rect.y + rect.h,
-                  width: "100%",
-                  height: bounds.h - rect.y - rect.h
-                }}
-              />
+        <>
+          <div
+            className="image-cropper__canvas"
+            ref={canvasRef}
+            style={canvasStyle}
+            onPointerDown={beginDraw}
+          >
+            <img
+              ref={imageRef}
+              alt={props.image.value?.altText || "Image crop source"}
+              src={imageUri}
+              className="image-cropper__image"
+              style={imageStyle}
+              draggable={false}
+              onLoad={updateBounds}
+              onDragStart={(event) => event.preventDefault()}
+            />
+            {rect && bounds ? (
+              <>
+                <div
+                  className="image-cropper__shade"
+                  style={{
+                    ...shadeBaseStyle,
+                    left: 0,
+                    top: 0,
+                    width: "100%",
+                    height: rect.y
+                  }}
+                />
+                <div
+                  className="image-cropper__shade"
+                  style={{
+                    ...shadeBaseStyle,
+                    left: 0,
+                    top: rect.y,
+                    width: rect.x,
+                    height: rect.h
+                  }}
+                />
+                <div
+                  className="image-cropper__shade"
+                  style={{
+                    ...shadeBaseStyle,
+                    left: rect.x + rect.w,
+                    top: rect.y,
+                    width: bounds.w - rect.x - rect.w,
+                    height: rect.h
+                  }}
+                />
+                <div
+                  className="image-cropper__shade"
+                  style={{
+                    ...shadeBaseStyle,
+                    left: 0,
+                    top: rect.y + rect.h,
+                    width: "100%",
+                    height: bounds.h - rect.y - rect.h
+                  }}
+                />
 
-              <div
-                className="image-cropper__selection"
-                style={{
-                  ...selectionBaseStyle,
-                  left: rect.x,
-                  top: rect.y,
-                  width: rect.w,
-                  height: rect.h
-                }}
-                onPointerDown={beginMove}
-              >
-                <button
-                  type="button"
-                  className="image-cropper__handle image-cropper__handle--nw"
-                  style={{ ...handleBaseStyle, ...handleStyles.nw }}
-                  onPointerDown={(event) => beginResize("nw", event)}
-                  aria-label="Resize north-west"
-                />
-                <button
-                  type="button"
-                  className="image-cropper__handle image-cropper__handle--ne"
-                  style={{ ...handleBaseStyle, ...handleStyles.ne }}
-                  onPointerDown={(event) => beginResize("ne", event)}
-                  aria-label="Resize north-east"
-                />
-                <button
-                  type="button"
-                  className="image-cropper__handle image-cropper__handle--se"
-                  style={{ ...handleBaseStyle, ...handleStyles.se }}
-                  onPointerDown={(event) => beginResize("se", event)}
-                  aria-label="Resize south-east"
-                />
-                <button
-                  type="button"
-                  className="image-cropper__handle image-cropper__handle--sw"
-                  style={{ ...handleBaseStyle, ...handleStyles.sw }}
-                  onPointerDown={(event) => beginResize("sw", event)}
-                  aria-label="Resize south-west"
-                />
-              </div>
-            </>
-          ) : null}
-        </div>
+                <div
+                  className="image-cropper__selection"
+                  style={{
+                    ...dynamicSelectionStyle,
+                    left: rect.x,
+                    top: rect.y,
+                    width: rect.w,
+                    height: rect.h
+                  }}
+                  onPointerDown={beginMove}
+                >
+                  <button
+                    type="button"
+                    className="image-cropper__handle image-cropper__handle--nw"
+                    style={{
+                      ...dynamicHandleBaseStyle,
+                      ...dynamicHandleStyles.nw
+                    }}
+                    onPointerDown={(event) => beginResize("nw", event)}
+                    aria-label="Resize north-west"
+                  />
+                  <button
+                    type="button"
+                    className="image-cropper__handle image-cropper__handle--ne"
+                    style={{
+                      ...dynamicHandleBaseStyle,
+                      ...dynamicHandleStyles.ne
+                    }}
+                    onPointerDown={(event) => beginResize("ne", event)}
+                    aria-label="Resize north-east"
+                  />
+                  <button
+                    type="button"
+                    className="image-cropper__handle image-cropper__handle--se"
+                    style={{
+                      ...dynamicHandleBaseStyle,
+                      ...dynamicHandleStyles.se
+                    }}
+                    onPointerDown={(event) => beginResize("se", event)}
+                    aria-label="Resize south-east"
+                  />
+                  <button
+                    type="button"
+                    className="image-cropper__handle image-cropper__handle--sw"
+                    style={{
+                      ...dynamicHandleBaseStyle,
+                      ...dynamicHandleStyles.sw
+                    }}
+                    onPointerDown={(event) => beginResize("sw", event)}
+                    aria-label="Resize south-west"
+                  />
+                </div>
+              </>
+            ) : null}
+          </div>
+          <div style={dynamicActionBarStyle}>
+            <button
+              type="button"
+              style={
+                canApply
+                  ? dynamicPrimaryButtonStyle
+                  : { ...dynamicPrimaryButtonStyle, ...disabledButtonStyle }
+              }
+              onClick={() => {
+                void applyCrop();
+              }}
+              disabled={!canApply}
+            >
+              {isApplying ? "Applying..." : "Apply crop"}
+            </button>
+            <button
+              type="button"
+              style={
+                bounds && naturalBounds && !isApplying
+                  ? dynamicButtonStyle
+                  : { ...dynamicButtonStyle, ...disabledButtonStyle }
+              }
+              onClick={resetSelection}
+              disabled={!bounds || !naturalBounds || isApplying}
+            >
+              Reset selection
+            </button>
+            <span style={hintStyle}>
+              Applying the crop overwrites the current image.
+            </span>
+          </div>
+        </>
       ) : null}
     </div>
   );
