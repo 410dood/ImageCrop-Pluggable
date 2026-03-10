@@ -13,7 +13,7 @@
         "type": "widget",
         "mpkName": "olari.imagecropper.mpk"
     },
-    "packagePath": "olari.imagecropper",
+    "packagePath": "olari",
     "scripts": {
         "start": "pluggable-widgets-tools start:server",
         "dev": "pluggable-widgets-tools start:web",
@@ -29,7 +29,7 @@
         "@mendix/pluggable-widgets-tools": "^11.6.0"
     },
     "config": {
-        "projectPath": "C:\\Users\\willi\\Mendix\\Olari-main_3",
+        "projectPath": "C:\\Users\\willi\\Mendix\\Olari-main",
         "mendixHost": "http://localhost:8080",
         "developmentPort": 3007
     },
